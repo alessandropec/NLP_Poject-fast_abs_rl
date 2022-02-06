@@ -1,4 +1,5 @@
 """ train extractor (ML)"""
+import gensim
 import argparse
 import json
 import os
@@ -19,7 +20,7 @@ from training import get_basic_grad_fn, basic_validate
 from training import BasicPipeline, BasicTrainer
 
 from utils import PAD, UNK
-from utils import make_vocab, make_embedding
+from utils import mymake_vocab, make_embedding
 
 from data.data import CnnDmDataset
 from data.batcher import coll_fn_extract, prepro_fn_extract
@@ -31,7 +32,7 @@ from data.batcher import BucketedGenerater
 BUCKET_SIZE = 6400
 
 try:
-    DATA_DIR = os.environ['DATA']
+    DATA_DIR = "C:\\Users\\emman\\Desktop\\neural_torch\\CHEN2\\fast_abs_rl\\pointer_data_splitted"#os.environ['DATA']
 except KeyError:
     print('please use environment variable to specify data directories')
 
@@ -48,7 +49,7 @@ class ExtractDataset(CnnDmDataset):
         return art_sents, extracts
 
 
-def build_batchers(net_type, word2id, cuda, debug):
+def build_batchers(net_type, word2id, cuda, debug,num_workers):
     assert net_type in ['ff', 'rnn']
     prepro = prepro_fn_extract(args.max_word, args.max_sent)
     def sort_key(sample):
@@ -64,7 +65,7 @@ def build_batchers(net_type, word2id, cuda, debug):
     train_loader = DataLoader(
         ExtractDataset('train'), batch_size=BUCKET_SIZE,
         shuffle=not debug,
-        num_workers=4 if cuda and not debug else 0,
+        num_workers=num_workers if cuda and not debug else 0,
         collate_fn=coll_fn_extract
     )
     train_batcher = BucketedGenerater(train_loader, prepro, sort_key, batchify,
@@ -72,7 +73,7 @@ def build_batchers(net_type, word2id, cuda, debug):
 
     val_loader = DataLoader(
         ExtractDataset('val'), batch_size=BUCKET_SIZE,
-        shuffle=False, num_workers=4 if cuda and not debug else 0,
+        shuffle=False, num_workers=num_workers if cuda and not debug else 0,
         collate_fn=coll_fn_extract
     )
     val_batcher = BucketedGenerater(val_loader, prepro, sort_key, batchify,
@@ -124,11 +125,19 @@ def main(args):
     assert args.net_type in ['ff', 'rnn']
     # create data batcher, vocabulary
     # batcher
-    with open(join(DATA_DIR, 'vocab_cnt.pkl'), 'rb') as f:
-        wc = pkl.load(f)
-    word2id = make_vocab(wc, args.vsize)
+    #with open(join(DATA_DIR, 'vocab_cnt.pkl'), 'rb') as f:
+    #    wc = pkl.load(f)
+    #word2id = make_vocab(wc, args.vsize)
+    #w2v = gensim.models.KeyedVectors.load_word2vec_format(args.w2v, binary=True)
+    w2v = gensim.models.Word2Vec.load(args.w2v).wv  
+  
+    wc = []
+    for word in w2v.vocab.items():
+        wc.append(word[0])
+    word2id = mymake_vocab(wc)
+
     train_batcher, val_batcher = build_batchers(args.net_type, word2id,
-                                                args.cuda, args.debug)
+                                                args.cuda, args.debug,args.num_workers)
 
     # make net
     net, net_args = configure_net(args.net_type,
@@ -138,7 +147,7 @@ def main(args):
         # NOTE: the pretrained embedding having the same dimension
         #       as args.emb_dim should already be trained
         embedding, _ = make_embedding(
-            {i: w for w, i in word2id.items()}, args.w2v)
+            {i: w for w, i in word2id.items()}, w2v)
         net.set_embedding(embedding)
 
     # configure training setting
@@ -188,9 +197,9 @@ if __name__ == '__main__':
     # model options
     parser.add_argument('--net-type', action='store', default='rnn',
                         help='model type of the extractor (ff/rnn)')
-    parser.add_argument('--vsize', type=int, action='store', default=30000,
+    parser.add_argument('--vsize', type=int, action='store', default=20000,
                         help='vocabulary size')
-    parser.add_argument('--emb_dim', type=int, action='store', default=128,
+    parser.add_argument('--emb_dim', type=int, action='store', default=300,
                         help='the dimension of word embedding')
     parser.add_argument('--w2v', action='store',
                         help='use pretrained word2vec embedding')
@@ -198,7 +207,7 @@ if __name__ == '__main__':
                         help='the number of hidden units of Conv')
     parser.add_argument('--lstm_hidden', type=int, action='store', default=256,
                         help='the number of hidden units of lSTM')
-    parser.add_argument('--lstm_layer', type=int, action='store', default=1,
+    parser.add_argument('--lstm_layer', type=int, action='store', default=2,
                         help='the number of layers of LSTM Encoder')
     parser.add_argument('--no-bi', action='store_true',
                         help='disable bidirectional LSTM encoder')
@@ -217,7 +226,7 @@ if __name__ == '__main__':
                         help='patience for learning rate decay')
     parser.add_argument('--clip', type=float, action='store', default=2.0,
                         help='gradient clipping')
-    parser.add_argument('--batch', type=int, action='store', default=32,
+    parser.add_argument('--batch', type=int, action='store', default=16,
                         help='the training batch size')
     parser.add_argument(
         '--ckpt_freq', type=int, action='store', default=3000,
@@ -230,6 +239,8 @@ if __name__ == '__main__':
                         help='run in debugging mode')
     parser.add_argument('--no-cuda', action='store_true',
                         help='disable GPU training')
+    parser.add_argument('--num_workers', type=int, action='store', default=4,
+                        help='vocabulary size')
     args = parser.parse_args()
     args.bi = not args.no_bi
     args.cuda = torch.cuda.is_available() and not args.no_cuda

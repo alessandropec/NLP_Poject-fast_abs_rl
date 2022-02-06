@@ -31,7 +31,7 @@ from metric import compute_rouge_l, compute_rouge_n
 MAX_ABS_LEN = 30
 
 try:
-    DATA_DIR = os.environ['DATA']
+    DATA_DIR =  "C:\\Users\\emman\\Desktop\\neural_torch\\CHEN2\\fast_abs_rl\\pointer_data_splitted"#os.environ['DATA']
 except KeyError:
     print('please use environment variable to specify data directories')
 
@@ -43,8 +43,10 @@ class RLDataset(CnnDmDataset):
 
     def __getitem__(self, i):
         js_data = super().__getitem__(i)
+  
         art_sents = js_data['article']
-        abs_sents = js_data['abstract']
+        abs_sents = js_data['gold']
+    
         return art_sents, abs_sents
 
 def load_ext_net(ext_dir):
@@ -109,12 +111,12 @@ def build_batchers(batch_size):
         return art_sents, abs_sents
     loader = DataLoader(
         RLDataset('train'), batch_size=batch_size,
-        shuffle=True, num_workers=4,
+        shuffle=True, num_workers=0,
         collate_fn=coll
     )
     val_loader = DataLoader(
         RLDataset('val'), batch_size=batch_size,
-        shuffle=False, num_workers=4,
+        shuffle=False, num_workers=0,
         collate_fn=coll
     )
     return cycle(loader), val_loader
@@ -212,7 +214,7 @@ if __name__ == '__main__':
                         help='stop coefficient for rouge-1')
     parser.add_argument('--clip', type=float, action='store', default=2.0,
                         help='gradient clipping')
-    parser.add_argument('--batch', type=int, action='store', default=32,
+    parser.add_argument('--batch', type=int, action='store', default=1,
                         help='the training batch size')
     parser.add_argument(
         '--ckpt_freq', type=int, action='store', default=1000,

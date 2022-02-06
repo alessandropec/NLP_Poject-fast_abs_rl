@@ -201,7 +201,7 @@ class CopyLSTMDecoder(AttentionalLSTMDecoder):
             ).scatter_add(
                 dim=1,
                 index=extend_src.expand_as(score),
-                source=score * copy_prob
+                src=score * copy_prob
         ) + 1e-8)  # numerical stability for log
         return lp, (states, dec_out), score
 

@@ -1,4 +1,5 @@
 """ train the abstractor"""
+import gensim
 import argparse
 import json
 import os
@@ -24,14 +25,14 @@ from data.batcher import convert_batch_copy, batchify_fn_copy
 from data.batcher import BucketedGenerater
 
 from utils import PAD, UNK, START, END
-from utils import make_vocab, make_embedding
+from utils import mymake_vocab, make_embedding
 
 # NOTE: bucket size too large may sacrifice randomness,
 #       to low may increase # of PAD tokens
 BUCKET_SIZE = 6400
 
 try:
-    DATA_DIR = os.environ['DATA']
+    DATA_DIR = "C:\\Users\\emman\\Desktop\\neural_torch\\CHEN2\\fast_abs_rl\\ptr_extracted_ita"#os.environ['DATA']
 except KeyError:
     print('please use environment variable to specify data directories')
 
@@ -45,7 +46,8 @@ class MatchDataset(CnnDmDataset):
     def __getitem__(self, i):
         js_data = super().__getitem__(i)
         art_sents, abs_sents, extracts = (
-            js_data['article'], js_data['abstract'], js_data['extracted'])
+            js_data['article'][0], js_data['gold'], js_data['extracted'][0])
+        #print(len(art_sents))
         matched_arts = [art_sents[i] for i in extracts]
         return matched_arts, abs_sents[:len(extracts)]
 
@@ -81,7 +83,7 @@ def configure_training(opt, lr, clip_grad, lr_decay, batch_size):
 
     return criterion, train_params
 
-def build_batchers(word2id, cuda, debug):
+def build_batchers(word2id, cuda, debug,num_workers):
     prepro = prepro_fn(args.max_art, args.max_abs)
     def sort_key(sample):
         src, target = sample
@@ -94,7 +96,7 @@ def build_batchers(word2id, cuda, debug):
     train_loader = DataLoader(
         MatchDataset('train'), batch_size=BUCKET_SIZE,
         shuffle=not debug,
-        num_workers=4 if cuda and not debug else 0,
+        num_workers=num_workers if cuda and not debug else 0,
         collate_fn=coll_fn
     )
     train_batcher = BucketedGenerater(train_loader, prepro, sort_key, batchify,
@@ -102,7 +104,7 @@ def build_batchers(word2id, cuda, debug):
 
     val_loader = DataLoader(
         MatchDataset('val'), batch_size=BUCKET_SIZE,
-        shuffle=False, num_workers=4 if cuda and not debug else 0,
+        shuffle=False, num_workers=num_workers if cuda and not debug else 0,
         collate_fn=coll_fn
     )
     val_batcher = BucketedGenerater(val_loader, prepro, sort_key, batchify,
@@ -112,11 +114,14 @@ def build_batchers(word2id, cuda, debug):
 def main(args):
     # create data batcher, vocabulary
     # batcher
-    with open(join(DATA_DIR, 'vocab_cnt.pkl'), 'rb') as f:
-        wc = pkl.load(f)
-    word2id = make_vocab(wc, args.vsize)
+    w2v = gensim.models.Word2Vec.load(args.w2v).wv  
+  
+    wc = []
+    for word in w2v.vocab.items():
+        wc.append(word[0])
+    word2id = mymake_vocab(wc)
     train_batcher, val_batcher = build_batchers(word2id,
-                                                args.cuda, args.debug)
+                                                args.cuda, args.debug,args.num_workers)
 
     # make net
     net, net_args = configure_net(len(word2id), args.emb_dim,
@@ -125,7 +130,7 @@ def main(args):
         # NOTE: the pretrained embedding having the same dimension
         #       as args.emb_dim should already be trained
         embedding, _ = make_embedding(
-            {i: w for w, i in word2id.items()}, args.w2v)
+            {i: w for w, i in word2id.items()}, w2v)
         net.set_embedding(embedding)
 
     # configure training setting
@@ -173,9 +178,9 @@ if __name__ == '__main__':
     parser.add_argument('--path', required=True, help='root of the model')
 
 
-    parser.add_argument('--vsize', type=int, action='store', default=30000,
+    parser.add_argument('--vsize', type=int, action='store', default=20000,
                         help='vocabulary size')
-    parser.add_argument('--emb_dim', type=int, action='store', default=128,
+    parser.add_argument('--emb_dim', type=int, action='store', default=300,
                         help='the dimension of word embedding')
     parser.add_argument('--w2v', action='store',
                         help='use pretrained word2vec embedding')
@@ -213,6 +218,8 @@ if __name__ == '__main__':
                         help='run in debugging mode')
     parser.add_argument('--no-cuda', action='store_true',
                         help='disable GPU training')
+    parser.add_argument('--num_workers', type=int, action='store', default=4,
+                        help='vocabulary size')
     args = parser.parse_args()
     args.bi = not args.no_bi
     args.cuda = torch.cuda.is_available() and not args.no_cuda

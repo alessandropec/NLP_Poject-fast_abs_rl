@@ -111,6 +111,7 @@ def pad_batch_tensorize(inputs, pad, cuda=True):
     """
     tensor_type = torch.cuda.LongTensor if cuda else torch.LongTensor
     batch_size = len(inputs)
+
     max_len = max(len(ids) for ids in inputs)
     tensor_shape = (batch_size, max_len)
     tensor = tensor_type(*tensor_shape)

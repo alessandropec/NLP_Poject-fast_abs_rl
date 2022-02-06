@@ -31,12 +31,25 @@ def make_vocab(wc, vocab_size):
         word2id[w] = i
     return word2id
 
+def mymake_vocab(wc):
+    word2id, id2word = {}, {}
+    word2id['<pad>'] = PAD
+    word2id['<unk>'] = UNK
+    word2id['<sos>'] = START
+    word2id['<eos>'] = END
+    i = 4
+    for w in wc:
+      if w != '<SOS>' and w!='<EOS>':
+        word2id[w] = i
+        i += 1
+    return word2id 
 
-def make_embedding(id2word, w2v_file, initializer=None):
-    attrs = basename(w2v_file).split('.')  #word2vec.{dim}d.{vsize}k.bin
-    w2v = gensim.models.Word2Vec.load(w2v_file).wv
+
+def make_embedding(id2word, w2v, initializer=None):
+    #attrs = basename(w2v_file).split('.')  #word2vec.{dim}d.{vsize}k.bin
+    #w2v = gensim.models.Word2Vec.load(w2v_file).wv
     vocab_size = len(id2word)
-    emb_dim = int(attrs[-3][:-1])
+    emb_dim = 300#int(attrs[-3][:-1])
     embedding = nn.Embedding(vocab_size, emb_dim).weight
     if initializer is not None:
         initializer(embedding)
@@ -46,9 +59,9 @@ def make_embedding(id2word, w2v_file, initializer=None):
         for i in range(len(id2word)):
             # NOTE: id2word can be list or dict
             if i == START:
-                embedding[i, :] = torch.Tensor(w2v['<s>'])
+                embedding[i, :] = torch.Tensor(w2v['<SOS>'])
             elif i == END:
-                embedding[i, :] = torch.Tensor(w2v[r'<\s>'])
+                embedding[i, :] = torch.Tensor(w2v[r'<EOS>'])
             elif id2word[i] in w2v:
                 embedding[i, :] = torch.Tensor(w2v[id2word[i]])
             else:
