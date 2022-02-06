@@ -41,5 +41,5 @@ if __name__ == "__main__":
             shutil.copyfile(PATH_POINTER+"/"+f_name,PATH_POINTER_SPLIT+"/val/"+f_name)
    
     else:
-        print("ERROR: you must secify the path of pointer data folder, and the percentage of training file (ex 0.7)")
+        print("ERROR: you must specify the path of pointer data folder, and the percentage of training file (ex 0.7)")
 
