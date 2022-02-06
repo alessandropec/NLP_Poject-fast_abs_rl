@@ -119,7 +119,7 @@ class PtrExtractorRLStop(PtrExtractorRL):
             else:
                 out = score.max(dim=1, keepdim=True)[1]
             outputs.append(out)
-            if out.item() == max_step:
+            if out.item() == max_step:#TO DO:deve estrarre almeno due frasi
                 break
             lstm_in = attn_mem[out.item()].unsqueeze(0)
             lstm_states = (h, c)
