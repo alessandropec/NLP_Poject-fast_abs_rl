@@ -1,7 +1,7 @@
-from data_utils.preprocess import create_tokenized_corpus
-from data_utils.preprocess import create_bow
-from data_utils.preprocess import process_docs
-from data_utils.preprocess import filter_doc
+from preprocess import create_tokenized_corpus
+from preprocess import create_bow
+from preprocess import process_docs
+from preprocess import filter_doc
 import json
 import os
 import sys
