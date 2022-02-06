@@ -1,15 +1,8 @@
 
 
-
-from data_utils.preprocess import label
+import os
+from preprocess import label
 import sys
-
-
-PATH_REP_PROC="./processed_data/annual_reports_processed"
-PATH_SUM_PROC="./processed_data/gold_summaries_processed"
-PATH_LABELLED="./processed_data/pointer_data"
-
-
 
 if __name__ == "__main__":
     '''
@@ -19,6 +12,7 @@ if __name__ == "__main__":
     '''
     if (len(sys.argv)==4):
         PATH_REP_PROC,PATH_SUM_PROC,PATH_LABELLED=sys.argv[1],sys.argv[2],sys.argv[3]
+        os.mkdir(PATH_LABELLED)
         label(PATH_REP_PROC,PATH_SUM_PROC,PATH_LABELLED)
 
    
