@@ -64,62 +64,52 @@ def a2c_train_step(agent, abstractor, loader, opt, grad_fn,
                       for idx in inds if idx.item() < len(raw_arts)]
     #print("Ext",ext_sents,"\n")
     reward=None
-    ext_sents=[]
-    if len(ext_sents)!=0:
-        with torch.no_grad():
-            summaries = abstractor(ext_sents)
-        #print("Sum",summaries,"\n")
-        i = 0
-        rewards = []
-        avg_reward = 0
-        for inds, abss in zip(indices, abs_batch):
-            rs = ([reward_fn(summaries[i+j], abss[j])
-                for j in range(min(len(inds)-1, len(abss)))]
-                + [0 for _ in range(max(0, len(inds)-1-len(abss)))]
-                + [stop_coeff*stop_reward_fn(
-                    list(concat(summaries[i:i+len(inds)-1])),
-                    list(concat(abss)))])
-            assert len(rs) == len(inds)
-            avg_reward += rs[-1]/stop_coeff
-            i += len(inds)-1
-            # compute discounted rewards
-            R = 0
-            disc_rs = []
-            for r in rs[::-1]:
-                R = r + gamma * R
-                disc_rs.insert(0, R)
-            rewards += disc_rs
-        indices = list(concat(indices))
-        probs = list(concat(probs))
-        baselines = list(concat(baselines))
-        # standardize rewards
-        reward = torch.Tensor(rewards).to(baselines[0].device)
-        reward = (reward - reward.mean()) / (
-            reward.std() + float(np.finfo(np.float32).eps))
-        baseline = torch.cat(baselines).squeeze()
-        avg_advantage = 0
-        losses = []
-        for action, p, r, b in zip(indices, probs, reward, baseline):
-            advantage = r - b
-            avg_advantage += advantage
-            losses.append(-p.log_prob(action)
-                        * (advantage/len(indices))) # divide by T*B
-        critic_loss = F.mse_loss(baseline, reward)
-        autograd.backward(
-        [critic_loss.unsqueeze(0)] + losses,
-        [torch.ones(1).to(critic_loss.device)]*(1+len(losses))
-        )
-    else:
-       
-        reward=torch.tensor(0,dtype=torch.float).to(baselines[0][0].device)
-        critic_loss = F.mse_loss(baselines[0][0], reward)
-        critic_loss.backward()
-        #autograd.backward(
-        #[critic_loss.unsqueeze(0)],
-        #[torch.tensor(1).to(critic_loss.device)])
-        
-    # backprop and update
-    #TO DO CAPIRE MEGLIO QUESTO PARTE
+    #ext_sents=[]
+    
+    with torch.no_grad():
+        summaries = abstractor(ext_sents)
+    print("Sum",summaries,"\n")
+    i = 0
+    rewards = []
+    avg_reward = 0
+    for inds, abss in zip(indices, abs_batch):
+        rs = ([reward_fn(summaries[i+j], abss[j])
+            for j in range(min(len(inds)-1, len(abss)))]
+            + [0 for _ in range(max(0, len(inds)-1-len(abss)))]
+            + [stop_coeff*stop_reward_fn(
+                list(concat(summaries[i:i+len(inds)-1])),
+                list(concat(abss)))])
+        assert len(rs) == len(inds)
+        avg_reward += rs[-1]/stop_coeff
+        i += len(inds)-1
+        # compute discounted rewards
+        R = 0
+        disc_rs = []
+        for r in rs[::-1]:
+            R = r + gamma * R
+            disc_rs.insert(0, R)
+        rewards += disc_rs
+    indices = list(concat(indices))
+    probs = list(concat(probs))
+    baselines = list(concat(baselines))
+    # standardize rewards
+    reward = torch.Tensor(rewards).to(baselines[0].device)
+    reward = (reward - reward.mean()) / (
+        reward.std() + float(np.finfo(np.float32).eps))
+    baseline = torch.cat(baselines).squeeze()
+    avg_advantage = 0
+    losses = []
+    for action, p, r, b in zip(indices, probs, reward, baseline):
+        advantage = r - b
+        avg_advantage += advantage
+        losses.append(-p.log_prob(action)
+                    * (advantage/len(indices))) # divide by T*B
+    critic_loss = F.mse_loss(baseline, reward)
+    autograd.backward(
+    [critic_loss.unsqueeze(0)] + losses,
+    [torch.ones(1).to(critic_loss.device)]*(1+len(losses))
+    )
+    
     
     grad_log = grad_fn()
     opt.step()
