@@ -125,8 +125,8 @@ def batchify_fn(pad, start, end, data, cuda=True):
     sources, targets = tuple(map(list, unzip(data)))
 
     src_lens = [len(src) for src in sources]
-    tar_ins = [[start] + tgt for tgt in targets]
-    targets = [tgt + [end] for tgt in targets]
+    tar_ins = [[start] + tgt[1:-1] for tgt in targets]
+    targets = [tgt[1:-1] + [end] for tgt in targets]
 
     source = pad_batch_tensorize(sources, pad, cuda)
     tar_in = pad_batch_tensorize(tar_ins, pad, cuda)
@@ -145,8 +145,8 @@ def batchify_fn_copy(pad, start, end, data, cuda=True):
     sources = [src for src in sources]
     ext_srcs = [ext for ext in ext_srcs]
 
-    tar_ins = [[start] + tgt for tgt in tar_ins]
-    targets = [tgt + [end] for tgt in targets]
+    tar_ins = [[start] + tgt[1:-1] for tgt in tar_ins]
+    targets = [tgt[1:-1] + [end] for tgt in targets]
 
     source = pad_batch_tensorize(sources, pad, cuda)
     tar_in = pad_batch_tensorize(tar_ins, pad, cuda)
@@ -164,7 +164,8 @@ def batchify_fn_extract_ptr(pad, data, cuda=True):
     source_lists, targets = tuple(map(list, unzip(data)))
 
     src_nums = list(map(len, source_lists))
-    sources = list(map(pad_batch_tensorize(pad=pad, cuda=cuda), source_lists))
+    #sources = list(map(pad_batch_tensorize(pad=pad, cuda=cuda), source_lists))
+    sources = [pad_batch_tensorize(source,pad=pad,cuda=cuda) for source in source_lists]
 
     # PAD is -1 (dummy extraction index) for using sequence loss
     target = pad_batch_tensorize(targets, pad=-1, cuda=cuda)
