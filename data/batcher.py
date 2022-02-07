@@ -31,7 +31,14 @@ def coll_fn_extract(data):
 
 @curry
 def tokenize(max_len, texts):
-    return [t.lower().split()[:max_len] for t in texts]
+    out=[t.lower().split()[:max_len] for t in texts]
+    for t in out:
+        if len(t)<5:
+            #print(t,end="")
+            t+=["<unk>"]*(5-len(t))
+            #print(t)
+    return out
+   
 
 def conver2id(unk, word2id, words_list):
     word2id = defaultdict(lambda: unk, word2id)

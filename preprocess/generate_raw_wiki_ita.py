@@ -6,7 +6,7 @@ import sys
 
 if __name__ == "__main__":
 
-  max_doc=None;
+  max_doc=None
   if len(sys.argv)!=3:
     if len(sys.argv)==4:
       max_doc=int(sys.argv[3])
