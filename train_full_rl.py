@@ -30,10 +30,7 @@ from metric import compute_rouge_l, compute_rouge_n
 
 MAX_ABS_LEN = 30
 
-try:
-    DATA_DIR =  "C:\\Users\\emman\\Desktop\\neural_torch\\CHEN2\\fast_abs_rl\\pointer_data_splitted"#os.environ['DATA']
-except KeyError:
-    print('please use environment variable to specify data directories')
+DATA_DIR=None
 
 
 class RLDataset(CnnDmDataset):
@@ -189,7 +186,7 @@ if __name__ == '__main__':
         description='program to demo a Seq2Seq model'
     )
     parser.add_argument('--path', required=True, help='root of the model')
-
+    parser.add_argument('--data_dir', required=True, help='the folder containing the extracted labels splitted in train and val')
 
     # model options
     parser.add_argument('--abs_dir', action='store',
@@ -225,6 +222,7 @@ if __name__ == '__main__':
     parser.add_argument('--no-cuda', action='store_true',
                         help='disable GPU training')
     args = parser.parse_args()
+    DATA_DIR=args.data_dir
     args.cuda = torch.cuda.is_available() and not args.no_cuda
 
     train(args)
