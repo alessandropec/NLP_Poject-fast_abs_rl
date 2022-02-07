@@ -30,11 +30,8 @@ from utils import mymake_vocab, make_embedding
 # NOTE: bucket size too large may sacrifice randomness,
 #       to low may increase # of PAD tokens
 BUCKET_SIZE = 6400
+DATA_DIR=None
 
-try:
-    DATA_DIR = "C:\\Users\\emman\\Desktop\\neural_torch\\CHEN2\\fast_abs_rl\\ptr_extracted_ita"#os.environ['DATA']
-except KeyError:
-    print('please use environment variable to specify data directories')
 
 class MatchDataset(CnnDmDataset):
     """ single article sentence -> single abstract sentence
@@ -175,6 +172,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='training of the abstractor (ML)'
     )
+    parser.add_argument('--data_dir', required=True, help='the folder containing the extracted labels splitted in train and val')
     parser.add_argument('--path', required=True, help='root of the model')
 
 
@@ -222,6 +220,7 @@ if __name__ == '__main__':
                         help='vocabulary size')
     args = parser.parse_args()
     args.bi = not args.no_bi
+    DATA_DIR=args.data_dir
     args.cuda = torch.cuda.is_available() and not args.no_cuda
 
     main(args)
