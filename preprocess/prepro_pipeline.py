@@ -34,8 +34,7 @@ HELP_STRING="\
             arg4: common_bow path (file,read)"
     
     
-PATH_REP_RAW="./raw_training/annual_reports"
-PATH_SUM_RAW="./raw_training/gold_summaries"
+
 
 
 
