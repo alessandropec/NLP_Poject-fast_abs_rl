@@ -21,14 +21,20 @@ if __name__ == "__main__":
   print("Number of grouped docs:",len(ita_docs))
   listed_docs=[]
   i=0
-  for docs in [list(v.items()) for k,v in ita_docs.items()]:
-      for doc in docs:
+  #print(ita_docs.items())
+  for docs in [v for k,v in ita_docs.items()]:
+      full_doc=[]
+      full_sum=[]
+      
+      for doc in docs.items():
           doc=list(doc)
-          doc[0]=str(i)
           doc[1].pop("english_url")
           doc[1].pop("english_section_name")
-          listed_docs.append(doc)
-          i+=1
+          
+          full_doc.append(doc[1]["document"])
+          full_sum.append(doc[1]["summary"])
+      listed_docs.append([str(i)," ".join(full_doc)," ".join(full_sum)])
+      i+=1
 
   print("Number of all docs",len(listed_docs))
 
@@ -46,9 +52,9 @@ if __name__ == "__main__":
   for doc in listed_docs:
       print("Saving doc and sum: ",doc[0])
       with open(PATH_TO_RAW+"/documents/"+doc[0]+".txt","w",encoding="utf8") as f:
-          f.write(doc[1]["document"])
+          f.write(doc[1])
       with open(PATH_TO_RAW+"/gold_summaries/"+doc[0]+"_1.txt","w",encoding="utf8") as f:
-          f.write(doc[1]["summary"])
+          f.write(doc[1])
   print("Copying file in \"all\" folder")
   for f_name in os.listdir(PATH_TO_RAW+"/documents"):
       shutil.copyfile(PATH_TO_RAW+"/documents/"+f_name,PATH_TO_RAW+"/all/"+f_name)
