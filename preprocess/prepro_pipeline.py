@@ -101,7 +101,7 @@ def full_pipeline(PATH_REP_RAW,PATH_SUM_RAW,PATH_COR_PROC,PATH_REP_PROC,PATH_SUM
 
     process_docs(PATH_SUM_RAW,PATH_SUM_PROC,common_bow)
 
-    print("All gold summaries have been processed look inside process_data folder")
+ 
 
 
 if __name__ == "__main__":
@@ -157,6 +157,8 @@ if __name__ == "__main__":
             full_pipeline(sys.argv[2],sys.argv[3],*args,sys.argv[5])
         else:
             print("ERROR: you must specify the correct number of arguments type help to doc")
+            exit()
+        print("Data have been processed look inside:",sys.argv[4])
 
     elif sys.argv[1]=="tok_corpus":
         if len(sys.argv)!=4:
