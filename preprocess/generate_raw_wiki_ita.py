@@ -43,7 +43,7 @@ if __name__ == "__main__":
   os.mkdir(PATH_TO_RAW+"/gold_summaries")
   if max_doc!=None:
     listed_docs=listed_docs[0:max_doc]
-  for doc in listed_docs[0:2000]:
+  for doc in listed_docs:
       print("Saving doc and sum: ",doc[0])
       with open(PATH_TO_RAW+"/documents/"+doc[0]+".txt","w",encoding="utf8") as f:
           f.write(doc[1]["document"])
