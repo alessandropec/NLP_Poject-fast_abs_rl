@@ -42,13 +42,13 @@ PATH_SUM_RAW="./raw_training/gold_summaries"
 
 
 
-def generate_dir():
-    PATH_BOW="./processed_data/bow"
-    PATH_COR_PROC="./processed_data/corpus_processed"
-    PATH_REP_PROC="./processed_data/annual_reports_processed"
-    PATH_SUM_PROC="./processed_data/gold_summaries_processed"
+def generate_dir(root):
+    PATH_BOW=root+"/bow"
+    PATH_COR_PROC=root+"/corpus_processed"
+    PATH_REP_PROC=root+"/annual_reports_processed"
+    PATH_SUM_PROC=root+"/gold_summaries_processed"
     try:
-        os.mkdir("./processed_data")
+        os.mkdir(root)
     except OSError as exc:
         print(exc)
         exit()
@@ -110,11 +110,13 @@ if __name__ == "__main__":
         help: print help documentation
 
         set_up: generate the folder for containing all data usefull to preprocessing
+            arg2: path of folder to save the processed_data the folder must not exists (folder,save)
         
         all: set_up and preprocess all data -> 
             arg2: report_raw path (folder, read); 
             arg3: summaries_raw path (folder, read);
-            arg4: all_docs_raw path (optional) (folder, read)
+            arg4: path of folder to save the processed_data the folder must not exists (folder,save)
+            arg5: all_docs_raw path (optional) (folder, read)
 
         tok_corpus: create the corpus that containing all tokenized sent from all reports ->
             arg2: report_raw path (folder, read);
@@ -139,7 +141,7 @@ if __name__ == "__main__":
         print(HELP_STRING)
         
     elif sys.argv[1]=="set_up":
-        generate_dir()
+        generate_dir(sys.argv[2])
 
     elif sys.argv[1]=="help":
         print(HELP_STRING)
@@ -147,12 +149,12 @@ if __name__ == "__main__":
     elif sys.argv[1]=="all":
         print(len(sys.argv))
         
-        if len(sys.argv)==4:
-            args=generate_dir()
+        if len(sys.argv)==5:
+            args=generate_dir(sys.argv[4])
             full_pipeline(sys.argv[2],sys.argv[3],*args)
-        elif len(sys.argv)==5:
-            args=generate_dir()
-            full_pipeline(sys.argv[2],sys.argv[3],*args,sys.argv[4])
+        elif len(sys.argv)==6:
+            args=generate_dir(sys.argv[4])
+            full_pipeline(sys.argv[2],sys.argv[3],*args,sys.argv[5])
         else:
             print("ERROR: you must specify the correct number of arguments type help to doc")
 
