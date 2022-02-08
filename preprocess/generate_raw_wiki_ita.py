@@ -54,7 +54,7 @@ if __name__ == "__main__":
       with open(PATH_TO_RAW+"/documents/"+doc[0]+".txt","w",encoding="utf8") as f:
           f.write(doc[1])
       with open(PATH_TO_RAW+"/gold_summaries/"+doc[0]+"_1.txt","w",encoding="utf8") as f:
-          f.write(doc[1])
+          f.write(doc[2])
   print("Copying file in \"all\" folder")
   for f_name in os.listdir(PATH_TO_RAW+"/documents"):
       shutil.copyfile(PATH_TO_RAW+"/documents/"+f_name,PATH_TO_RAW+"/all/"+f_name)
