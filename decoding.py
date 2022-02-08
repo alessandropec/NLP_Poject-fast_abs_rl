@@ -49,8 +49,7 @@ def load_best_ckpt(model_dir,device="cuda", reverse=False):
     print('loading checkpoint {}...'.format(ckpts[0]))
     dev=torch.device(device)
     ckpt = torch.load(
-        join(model_dir, 'ckpt/{}'.format(ckpts[0]),map_location=dev)
-    )['state_dict']
+        join(model_dir, 'ckpt/{}'.format(ckpts[0])),map_location=dev)['state_dict']
     return ckpt
 
 
