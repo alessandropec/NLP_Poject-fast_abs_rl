@@ -42,8 +42,8 @@ class RLDataset(CnnDmDataset):
     def __getitem__(self, i):
         js_data = super().__getitem__(i)
         if self._max_sent is not None:
-            extracts = js_data['extracted']
-            art_sents = js_data['article'][:self._max_sent]
+            extracts = js_data['extracted'][0]
+            art_sents = js_data['article'][0][:self._max_sent]
             abs_sents = []
             cleaned_extracts = list(filter(lambda e: e < len(art_sents), extracts))
             for (j,e1), e2 in zip(enumerate(extracts), cleaned_extracts):
@@ -74,7 +74,7 @@ def configure_net(abs_dir, ext_dir, cuda):
         abstractor = identity
 
     # load ML trained extractor net and buiild RL agent
-    extractor, agent_vocab = load_ext_net(ext_dir,"cuda" if cuda else "cpu")
+    extractor, agent_vocab = load_ext_net(ext_dir)
     agent = ActorCritic(extractor._sent_enc,
                         extractor._art_enc,
                         extractor._extractor,
