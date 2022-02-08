@@ -76,11 +76,13 @@ class Abstractor(object):
                 if not w in ext_word2id:
                     ext_word2id[w] = len(ext_word2id)
                     ext_id2word[len(ext_id2word)] = w
+        raw_article_sents = [raw_article_sent[1:] for raw_article_sent in raw_article_sents] # remove first sos because will be added later in the batch decode step 
         articles = conver2id(UNK, self._word2id, raw_article_sents)
-        articles = [article[1:] for article in articles] # this is because otherwise there would be two START tokens per report
+        #articles = [article[1:] for article in articles] # this is because otherwise there would be two START tokens per report
         art_lens = [len(art) for art in articles]
         article = pad_batch_tensorize(articles, PAD, cuda=False
                                      ).to(self._device)
+        #raw_article_sents = [raw_article_sent[1:] for raw_article_sent in raw_article_sents]
         extend_arts = conver2id(UNK, ext_word2id, raw_article_sents)
         extend_art = pad_batch_tensorize(extend_arts, PAD, cuda=False
                                         ).to(self._device)
