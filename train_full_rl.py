@@ -74,7 +74,7 @@ def configure_net(abs_dir, ext_dir, cuda):
         abstractor = identity
 
     # load ML trained extractor net and buiild RL agent
-    extractor, agent_vocab = load_ext_net(ext_dir)
+    extractor, agent_vocab = load_ext_net(ext_dir,"cuda" if cuda else "cpu")
     agent = ActorCritic(extractor._sent_enc,
                         extractor._art_enc,
                         extractor._extractor,
@@ -133,7 +133,7 @@ def train(args):
 
     # make net
     agent, agent_vocab, abstractor, net_args = configure_net(
-        args.abs_dir, args.ext_dir, args.cuda)
+        args.abs_dir, args.ext_dir,args.cuda)
 
     # configure training setting
     assert args.stop > 0
@@ -205,7 +205,7 @@ if __name__ == '__main__':
                         help='ckeckpoint used decode')
 
     # training options
-    parser.add_argument('--max_sent', action='store', default=None, 
+    parser.add_argument('--max_sent', action='store', default=None, type=int,
                         help='max number of sentences for each document')
     parser.add_argument('--reward', action='store', default='rouge-l',
                         help='reward function for RL')
