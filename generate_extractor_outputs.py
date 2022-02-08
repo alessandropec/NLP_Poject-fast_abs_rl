@@ -147,10 +147,10 @@ def load_dataset(path):
             documents.append((js["article"],js["extracted"],file_num)) # gli scores non ci dovrebbero servire a nulla, tanto tutti 1.0
     return documents
 
-def load_ext_net(ext_dir):
+def load_ext_net(ext_dir,cuda):
     ext_meta = json.load(open(join(ext_dir, 'meta.json')))
     assert ext_meta['net'] == 'ml_rnn_extractor'
-    ext_ckpt = load_best_ckpt(ext_dir)
+    ext_ckpt = load_best_ckpt(ext_dir,"cuda" if cuda else "cpu")
     ext_args = ext_meta['net_args']
     vocab = pkl.load(open(join(ext_dir, 'vocab.pkl'), 'rb'))
     ext = PtrExtractSumm(**ext_args)
@@ -158,7 +158,10 @@ def load_ext_net(ext_dir):
     return ext, vocab
 
 def main(args):
-  cuda=args.cuda
+  cuda=True
+  if args.no_cuda:
+    cuda=not args.no_cuda
+
   
   w2v = gensim.models.Word2Vec.load(args.w2v_file).wv
   
@@ -168,7 +171,7 @@ def main(args):
   word2id = make_vocab(wc)
   id2word = {i: w for w, i in word2id.items()}
   vocab_size = len(word2id)
-  net,_=load_ext_net(args.extractor_model)
+  net,_=load_ext_net(args.extractor_model,cuda)
   #net = PtrExtractSumm(emb_dim=300,vocab_size=vocab_size,conv_hidden=args.conv_hidden,lstm_hidden=args.lstm_hidden,lstm_layer=args.lstm_layer,bidirectional=args.bidirectional)
   #net.load_state_dict(torch.load(args.extractor_model))
   
@@ -220,7 +223,7 @@ if __name__ == '__main__':
         description='extraction of the labels from pretrained extractor model'
     )
     parser.add_argument('--dir', required=True, help='directory of the training samples')
-    parser.add_argument('--cuda', type=bool,default=False, help='set cuda gpu')
+    parser.add_argument('--no-cuda',default=False, action="store_true",help='set cuda gpu')
     # model options
     parser.add_argument('--w2v_file', action='store',
                         help='pretrained word2vec embedding')
