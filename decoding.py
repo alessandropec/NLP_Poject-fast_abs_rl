@@ -77,8 +77,8 @@ class Abstractor(object):
                     ext_word2id[w] = len(ext_word2id)
                     ext_id2word[len(ext_id2word)] = w
         articles = conver2id(UNK, self._word2id, raw_article_sents)
-        art_lens = [len(art) for art in articles]
         articles = [article[1:] for article in articles] # this is because otherwise there would be two START tokens per report
+        art_lens = [len(art) for art in articles]
         article = pad_batch_tensorize(articles, PAD, cuda=False
                                      ).to(self._device)
         extend_arts = conver2id(UNK, ext_word2id, raw_article_sents)
