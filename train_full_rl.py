@@ -35,15 +35,23 @@ DATA_DIR=None
 
 class RLDataset(CnnDmDataset):
     """ get the article sentences only (for decoding use)"""
-    def __init__(self, split):
+    def __init__(self, split, max_sent):
         super().__init__(split, DATA_DIR)
+        self._max_sent = max_sent
 
     def __getitem__(self, i):
         js_data = super().__getitem__(i)
-  
-        art_sents = js_data['article']
-        abs_sents = js_data['gold']
-    
+        if self._max_sent is not None:
+            extracts = js_data['extracted']
+            art_sents = js_data['article'][:self._max_sent]
+            abs_sents = []
+            cleaned_extracts = list(filter(lambda e: e < len(art_sents), extracts))
+            for (j,e1), e2 in zip(enumerate(extracts), cleaned_extracts):
+                if e1 == e2:
+                    abs_sents.append(js_data['gold'][j])
+        else:
+            art_sents = js_data['article']
+            abs_sents = js_data['gold']
         return art_sents, abs_sents
 
 def load_ext_net(ext_dir):
@@ -107,12 +115,12 @@ def build_batchers(batch_size):
         abs_sents = list(filter(bool, map(tokenize(None), abs_batch)))
         return art_sents, abs_sents
     loader = DataLoader(
-        RLDataset('train'), batch_size=batch_size,
+        RLDataset('train', args.max_sent), batch_size=batch_size,
         shuffle=True, num_workers=0,
         collate_fn=coll
     )
     val_loader = DataLoader(
-        RLDataset('val'), batch_size=batch_size,
+        RLDataset('val', args.max_sent), batch_size=batch_size,
         shuffle=False, num_workers=0,
         collate_fn=coll
     )
@@ -197,6 +205,8 @@ if __name__ == '__main__':
                         help='ckeckpoint used decode')
 
     # training options
+    parser.add_argument('--max_sent', action='store', default=None, 
+                        help='max number of sentences for each document')
     parser.add_argument('--reward', action='store', default='rouge-l',
                         help='reward function for RL')
     parser.add_argument('--lr', type=float, action='store', default=1e-4,
