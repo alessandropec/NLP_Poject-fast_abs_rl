@@ -43,7 +43,7 @@ class MatchDataset(CnnDmDataset):
     def __getitem__(self, i):
         js_data = super().__getitem__(i)
         art_sents, abs_sents, extracts = (
-            js_data['article'][0], js_data['gold'], js_data['predicted'][0])
+            js_data['article'][0], js_data['gold'], js_data['predicted'])
         #print(len(art_sents))
         matched_arts = [art_sents[i] for i in extracts]
         return matched_arts, abs_sents[:len(extracts)]
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('--patience', type=int, action='store', default=5,
                         help='patience for early stopping')
 
-    parser.add_argument('--debug', action='store_true',
+    parser.add_argument('--debug', action='store', default=True,
                         help='run in debugging mode')
     parser.add_argument('--no-cuda', action='store_true',
                         help='disable GPU training')
