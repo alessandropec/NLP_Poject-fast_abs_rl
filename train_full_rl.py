@@ -43,6 +43,7 @@ class RLDataset(CnnDmDataset):
         js_data = super().__getitem__(i)
         if self._max_sent is not None:
             extracts = js_data['extracted'][0]
+            #print("js_data['gold']",js_data['gold'])
             art_sents = js_data['article'][0][:self._max_sent]
             abs_sents = []
             cleaned_extracts = list(filter(lambda e: e < len(art_sents), extracts))
@@ -52,6 +53,10 @@ class RLDataset(CnnDmDataset):
         else:
             art_sents = js_data['article']
             abs_sents = js_data['gold']
+        #print("art_sents",art_sents)
+        #print("abs_sents",abs_sents)
+        if not abs_sents:
+          abs_sents = js_data['gold']
         return art_sents, abs_sents
 
 def load_ext_net(ext_dir):
