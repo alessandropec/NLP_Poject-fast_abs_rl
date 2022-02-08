@@ -141,7 +141,7 @@ def load_dataset(path):
     for filename in os.listdir(path):
         file_num = filename.split('.')[0]
         #print(join(path,filename))
-        with open(join(path+"\\",filename)) as f:
+        with open(join(path+"/",filename)) as f:
          js = json.loads(f.read())
         if js["extracted"] and min(js["extracted"]) < args.max_sents_article:
             documents.append((js["article"],js["extracted"],file_num)) # gli scores non ci dovrebbero servire a nulla, tanto tutti 1.0
@@ -203,7 +203,7 @@ def main(args):
       article_sents, sent_nums = fw_args
       predicted = net.extract(article_sents, sent_nums, k)
       file_num = file_num[0]
-      with open(args.dir +"\\"+ file_num + ".json", "r") as f:
+      with open(args.dir +"/"+ file_num + ".json", "r") as f:
         js = json.loads(f.read())
         data['article'] = sources
         data['extracted'] = extracted
