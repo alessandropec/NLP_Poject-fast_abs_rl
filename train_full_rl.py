@@ -51,7 +51,7 @@ class RLDataset(CnnDmDataset):
                 if e1 == e2:
                     abs_sents.append(js_data['gold'][j])
         else:
-            art_sents = js_data['article']
+            art_sents = js_data['article'][0]
             abs_sents = js_data['gold']
         #print("art_sents",art_sents)
         #print("abs_sents",abs_sents)
