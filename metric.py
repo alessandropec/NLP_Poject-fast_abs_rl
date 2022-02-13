@@ -124,39 +124,3 @@ def compute_rouge_l_summ(summs, refs, mode='f'):
         else:
             score = f_score
     return score
-
-
-try:
-    _METEOR_PATH = os.environ['METEOR']
-except KeyError:
-    print('Warning: METEOR is not configured')
-    _METEOR_PATH = None
-class Meteor(object):
-    def __init__(self):
-        assert _METEOR_PATH is not None
-        cmd = 'java -Xmx2G -jar {} - - -l en -norm -stdio'.format(_METEOR_PATH)
-        self._meteor_proc = sp.Popen(
-            cmd.split(),
-            stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE,
-            universal_newlines=True, encoding='utf-8', bufsize=1
-        )
-        self._lock = threading.Lock()
-
-    def __call__(self, summ, ref):
-        self._lock.acquire()
-        score_line = 'SCORE ||| {} ||| {}\n'.format(
-            ' '.join(ref), ' '.join(summ))
-        self._meteor_proc.stdin.write(score_line)
-        stats = self._meteor_proc.stdout.readline().strip()
-        eval_line = 'EVAL ||| {}\n'.format(stats)
-        self._meteor_proc.stdin.write(eval_line)
-        score = float(self._meteor_proc.stdout.readline().strip())
-        self._lock.release()
-        return score
-
-    def __del__(self):
-        self._lock.acquire()
-        self._meteor_proc.stdin.close()
-        self._meteor_proc.kill()
-        self._meteor_proc.wait()
-        self._lock.release()
