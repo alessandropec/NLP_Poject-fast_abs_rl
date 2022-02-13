@@ -11,69 +11,94 @@ from functools import reduce
 import operator as op
 
 from cytoolz import identity, concat, curry
+from toolz.sandbox.core import unzip
 
 import torch
 from torch.utils.data import DataLoader
 from torch import multiprocessing as mp
+from data.data import CnnDmDataset
 
 from data.batcher import tokenize
 
 from decoding import Abstractor, RLExtractor, DecodeDataset, BeamAbstractor
-from decoding import make_html_safe
+from statistics import mean
+from metric import compute_rouge_n, compute_rouge_l_summ
+from nltk.translate.bleu_score import sentence_bleu
 
 
-def decode(save_path, model_dir, split, batch_size,
-           beam_size, diverse, max_len, cuda):
+DATA_DIR = 'model_files/chen_clone/NLP_Poject-fast_abs_rl-1/ptr_data_splitted'
+
+def coll(batch):
+        art_batch, abs_batch = unzip(batch)
+        art_sents = list(filter(bool, map(tokenize(None), art_batch)))
+        abs_sents = list(filter(bool, map(tokenize(None), abs_batch))) 
+        return art_sents, abs_sents
+
+class EvalDataset(CnnDmDataset):
+    """ get the article sentences only (for decoding use)"""
+    def __init__(self, split, max_sent):
+        super().__init__(split, DATA_DIR)
+        self._max_sent = max_sent
+
+    def __getitem__(self, i):
+        js_data = super().__getitem__(i)
+        if self._max_sent is not None:
+            extracts = js_data['extracted']
+            art_sents = js_data['article'][:self._max_sent]
+            abs_sents = []
+            cleaned_extracts = list(filter(lambda e: e < len(art_sents), extracts))
+            for (j,e1), e2 in zip(enumerate(extracts), cleaned_extracts):
+                if e1 == e2:
+                    abs_sents.append(js_data['gold'][j])
+        else:
+            art_sents = js_data['article']
+            abs_sents = js_data['gold']
+        return art_sents, abs_sents
+
+def decode_eval(save_path, model_dir, split, max_sent, batch_size, max_len, cuda, coll_fn=coll):
     start = time()
     # setup model
-    with open(join(model_dir, 'meta.json')) as f:
+    with open(join(model_dir+'/meta.json')) as f:
         meta = json.loads(f.read())
     if meta['net_args']['abstractor'] is None:
         # NOTE: if no abstractor is provided then
         #       the whole model would be extractive summarization
-        assert beam_size == 1
         abstractor = identity
     else:
-        if beam_size == 1:
-            abstractor = Abstractor(join(model_dir, 'abstractor'),
+        abstractor = Abstractor(join(model_dir, 'abstractor'),
                                     max_len, cuda)
-        else:
-            abstractor = BeamAbstractor(join(model_dir, 'abstractor'),
-                                        max_len, cuda)
+
     extractor = RLExtractor(model_dir, cuda=cuda)
 
     # setup loader
-    def coll(batch):
-        articles = list(filter(bool, batch))
-        return articles
-    dataset = DecodeDataset(split)
+    dataset = EvalDataset('val', max_sent)
 
     n_data = len(dataset)
-    loader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, num_workers=4,
-        collate_fn=coll
-    )
 
+    loader = DataLoader(
+        dataset, batch_size=batch_size, shuffle=False, num_workers=0,
+        collate_fn=coll_fn
+    )
     # prepare save paths and logs
-    os.makedirs(join(save_path, 'output'))
+    os.makedirs(join(save_path, 'outputs'))
     dec_log = {}
     dec_log['abstractor'] = meta['net_args']['abstractor']
     dec_log['extractor'] = meta['net_args']['extractor']
     dec_log['rl'] = True
     dec_log['split'] = split
-    dec_log['beam'] = beam_size
-    dec_log['diverse'] = diverse
     with open(join(save_path, 'log.json'), 'w') as f:
         json.dump(dec_log, f, indent=4)
 
     # Decoding
     i = 0
+    avg_reward = {"rouge-2": [], "rouge-1": [], "rouge-L": []}
     with torch.no_grad():
-        for i_debug, raw_article_batch in enumerate(loader):
-            tokenized_article_batch = map(tokenize(None), raw_article_batch)
+        for raw_article_batch, val_batch in loader:
+            #tokenized_article_batch = map(tokenize(None), raw_article_batch)
+            #tokenized_gold_batch = map(tokenize(None), gold_batch)
             ext_arts = []
             ext_inds = []
-            for raw_art_sents in tokenized_article_batch:
+            for raw_art_sents in raw_article_batch:
                 ext = extractor(raw_art_sents)[:-1]  # exclude EOE
                 if not ext:
                     # use top-5 if nothing is extracted
@@ -83,58 +108,35 @@ def decode(save_path, model_dir, split, batch_size,
                     ext = [i.item() for i in ext]
                 ext_inds += [(len(ext_arts), len(ext))]
                 ext_arts += [raw_art_sents[i] for i in ext]
-            if beam_size > 1:
-                all_beams = abstractor(ext_arts, beam_size, diverse)
-                dec_outs = rerank_mp(all_beams, ext_inds)
-            else:
-                dec_outs = abstractor(ext_arts)
-            assert i == batch_size*i_debug
-            for j, n in ext_inds:
+            
+            dec_outs = abstractor(ext_arts)
+            #assert i == batch_size*i_debug
+            for (j, n), gold in zip(ext_inds, val_batch):
+                for g,sent in enumerate(gold):
+                    sent = sent[1:-1] #remove sos/eos
+                    gold[g] = sent
                 decoded_sents = [' '.join(dec) for dec in dec_outs[j:j+n]]
-                with open(join(save_path, 'output/{}.dec'.format(i)),
-                          'w') as f:
-                    f.write(make_html_safe('\n'.join(decoded_sents)))
+                #evaluation
+                avg_reward['rouge-2'].append(compute_rouge_n(list(concat(dec_outs)),list(concat(gold)), n=2))
+                avg_reward['rouge-1'].append(compute_rouge_n(list(concat(dec_outs)),list(concat(gold)), n=1))            
+                avg_reward['rouge-L'].append(compute_rouge_l_summ(dec_outs, gold))
+                with open(join(save_path, f'outputs/{i}.txt'),
+                          'w', encoding="utf-8") as f:
+                    f.write('\n'.join(decoded_sents))
                 i += 1
+
                 print('{}/{} ({:.2f}%) decoded in {} seconds\r'.format(
                     i, n_data, i/n_data*100,
-                    timedelta(seconds=int(time()-start))
-                ), end='')
+                    timedelta(seconds=int(time()-start))), end='')
+                #avg_reward['rouge-2'] /= (i/100)
+                #avg_reward['rouge-L'] /= (i/100)
+
+
+    print('Avg rouge-2: ',mean(avg_reward['rouge-2']))
+    print('Avg rouge-1: ',mean(avg_reward['rouge-1']))
+    print('Avg rouge-L: ',mean(avg_reward['rouge-L']))
+            
     print()
-
-_PRUNE = defaultdict(
-    lambda: 2,
-    {1:5, 2:5, 3:5, 4:5, 5:5, 6:4, 7:3, 8:3}
-)
-
-def rerank(all_beams, ext_inds):
-    beam_lists = (all_beams[i: i+n] for i, n in ext_inds if n > 0)
-    return list(concat(map(rerank_one, beam_lists)))
-
-def rerank_mp(all_beams, ext_inds):
-    beam_lists = [all_beams[i: i+n] for i, n in ext_inds if n > 0]
-    with mp.Pool(8) as pool:
-        reranked = pool.map(rerank_one, beam_lists)
-    return list(concat(reranked))
-
-def rerank_one(beams):
-    @curry
-    def process_beam(beam, n):
-        for b in beam[:n]:
-            b.gram_cnt = Counter(_make_n_gram(b.sequence))
-        return beam[:n]
-    beams = map(process_beam(n=_PRUNE[len(beams)]), beams)
-    best_hyps = max(product(*beams), key=_compute_score)
-    dec_outs = [h.sequence for h in best_hyps]
-    return dec_outs
-
-def _make_n_gram(sequence, n=2):
-    return (tuple(sequence[i:i+n]) for i in range(len(sequence)-(n-1)))
-
-def _compute_score(hyps):
-    all_cnt = reduce(op.iadd, (h.gram_cnt for h in hyps), Counter())
-    repeat = sum(c-1 for g, c in all_cnt.items() if c > 1)
-    lp = sum(h.logprob for h in hyps) / sum(len(h.sequence) for h in hyps)
-    return (-repeat, lp)
 
 
 if __name__ == '__main__':
@@ -145,25 +147,23 @@ if __name__ == '__main__':
 
     # dataset split
     data = parser.add_mutually_exclusive_group(required=True)
-    data.add_argument('--val', action='store_true', help='use validation set')
-    data.add_argument('--test', action='store_true', help='use test set')
+    data.add_argument('--split', action='store', help='use split set')
 
     # decode options
-    parser.add_argument('--batch', type=int, action='store', default=32,
+    parser.add_argument('--batch', type=int, action='store', default=2,
                         help='batch size of faster decoding')
-    parser.add_argument('--beam', type=int, action='store', default=1,
-                        help='beam size for beam-search (reranking included)')
-    parser.add_argument('--div', type=float, action='store', default=1.0,
-                        help='diverse ratio for the diverse beam-search')
-    parser.add_argument('--max_dec_word', type=int, action='store', default=30,
-                        help='maximun words to be decoded for the abstractor')
+    parser.add_argument('--max_sent', type=int, action='store', default=None,
+                        help='max num of sents for decoding')
+    parser.add_argument('--max_dec_word', type=int, action='store', default=50,
+                        help='maximum words to be decoded for the abstractor')
 
-    parser.add_argument('--no-cuda', action='store_true',
-                        help='disable GPU training')
     args = parser.parse_args()
-    args.cuda = torch.cuda.is_available() and not args.no_cuda
+    args.cuda = torch.cuda.is_available() 
 
-    data_split = 'test' if args.test else 'val'
-    decode(args.path, args.model_dir,
-           data_split, args.batch, args.beam, args.div,
-           args.max_dec_word, args.cuda)
+    #data_split = 'test' if args.test else 'val' 
+
+    cuda = torch.cuda.is_available()
+
+    decode_eval(args.path, args.model_dir, args.split, args.max_sent, 
+                args.batch, args.max_dec_word, cuda)
+
