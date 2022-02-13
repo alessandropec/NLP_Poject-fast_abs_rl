@@ -23,10 +23,8 @@ from data.batcher import tokenize
 from decoding import Abstractor, RLExtractor, DecodeDataset, BeamAbstractor
 from statistics import mean
 from metric import compute_rouge_n, compute_rouge_l_summ
-from nltk.translate.bleu_score import sentence_bleu
 
-
-DATA_DIR = 'model_files/chen_clone/NLP_Poject-fast_abs_rl-1/ptr_data_splitted'
+DATA_DIR = 'path/to/processed/data/to/be/evaluated'
 
 def coll(batch):
         art_batch, abs_batch = unzip(batch)
