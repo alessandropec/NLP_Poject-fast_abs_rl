@@ -99,8 +99,10 @@ python train_abstractor.py --data_dir=<PATH TO ABST DATA SPLITTED> --path=<PATH 
 ## Train full rl model
 Use the script train_full_rl.py run the following command
 
+The arguments --reward=avg_rouges sets the reward function as the average of rouge-1, rouge-2, rouge-L, by default the reward is only the rouge-2
+
 ```
-python train_full_rl.py --data_dir=<PATH OF LABELLED DATA SPLITTED> --path<PATH WHERE TO SAVE THE MODEL> --ext_dir=<EXTRACTOR MODEL PATH> --abs_dir=<ABSTRACTOR MODEL PATH>        
+python train_full_rl.py --data_dir=<PATH OF ABSTRACTOR DATA> --path<PATH WHERE TO SAVE THE MODEL> --ext_dir=<EXTRACTOR MODEL PATH> --abs_dir=<ABSTRACTOR MODEL PATH> --reward=avg_rouges       
 ```
 
 # Make evaluation
