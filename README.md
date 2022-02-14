@@ -12,22 +12,19 @@ You can
 
 1. FNS 2021 donwload [here](https://drive.google.com/drive/folders/1jWEzOjuC47BkrOpM6USdHGqVDisqZefm?usp=sharing) 
 2. Italian set of data extracted from WikiLingua download frome [here](https://drive.google.com/drive/folders/1KF0uJWvf1IhDXaMlqlS0jA0CIWmtC8Fd?usp=sharing)
-
-    a. wiki2k extraction of 2k paragraph and respective summaries
-    
-    b. wiki10k extraction of 10k document and respective summaries
+For the italian dataset we refer to it as wiki10k since is an extraction of 10k document and respective summaries.
 
 We report some statistics of the 3 datasets analyzed (Note we use only 450 document for fns)
 
-|                    | wiki2k               | wiki2k          | wiki10k   | wiki10k           | fns-2021  |fns-2021           |
-|--------------------|-----------------------|-----------|-----------|-----------|-----------|-----------|
-|                    | Documents (paragraph) | Summaries | Documents | Summaries | Documents | Summaries |
-| tot word           | 839872                | 97102     | 11670364  | 1354573   | 21689271  | 1040095   |
-| avg words per sent | 19,237                | 9,725     | 19,016    | 9,46      | 36,23     | 29,59     |
-| avg words per doc  | 419,936               | 48,551    | 1167,153  | 135,47    | 48198,38  | 2311,32   |
-| tot sents          | 43659                 | 9984      | 613711    | 143098    | 598496    | 35149     |
-| avg sents per doc  | 21,829                | 4,992     | 61,37     | 14,31     | 1329,99   | 78,1      |
-| tot_docs           | 2000                  | 2000      | 10000     | 10000     | 450       | 450       |
+|                    | wiki10k   | wiki10k   | fns-2021  |fns-2021           |
+|--------------------|-----------|-----------|-----------|-----------|
+|                    | Documents | Summaries | Documents | Summaries |
+| tot word           | 11670364  | 1354573   | 21689271  | 1040095   |
+| avg words per sent | 19,016    | 9,46      | 36,23     | 29,59     |
+| avg words per doc  | 1167,153  | 135,47    | 48198,38  | 2311,32   |
+| tot sents          | 613711    | 143098    | 598496    | 35149     |
+| avg sents per doc  | 61,37     | 14,31     | 1329,99   | 78,1      |
+| tot_docs           | 10000     | 10000     | 450       | 450       |
 
 # Models
 
