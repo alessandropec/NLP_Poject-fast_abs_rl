@@ -6,6 +6,8 @@ You can
 2. Train the models
 3. Evaluate the models
 
+*A .yipnb demo file is avalaible [here](https://colab.research.google.com/drive/18i1xwIIXWRAvBrdyV0meeeAqe0ysddGr?usp=sharing)* 
+
 # Datasets used
 
 1. FNS 2021 donwload [here](https://drive.google.com/drive/folders/1jWEzOjuC47BkrOpM6USdHGqVDisqZefm?usp=sharing) 
@@ -39,7 +41,7 @@ We report some statistics of the 3 datasets analyzed (Note we use only 450 docum
 - [tensorboardX](https://github.com/lanpa/tensorboard-pytorch)
 - [pyrouge](https://github.com/bheinzerling/pyrouge) (for evaluation)
 
-*A .yipnb demo is avalaible [here](https://colab.research.google.com/drive/18i1xwIIXWRAvBrdyV0meeeAqe0ysddGr?usp=sharing)* 
+
 
 # Process data (full pipeline)
 To run the whole preprocess pipeline use the script inside preprocess folder prepro_pipeline.py, run the following command.
