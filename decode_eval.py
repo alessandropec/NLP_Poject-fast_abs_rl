@@ -24,7 +24,7 @@ from decoding import Abstractor, RLExtractor, DecodeDataset, BeamAbstractor
 from statistics import mean
 from metric import compute_rouge_n, compute_rouge_l_summ
 
-DATA_DIR = 'path/to/processed/data/to/be/evaluated'
+DATA_DIR = None
 
 def coll(batch):
         art_batch, abs_batch = unzip(batch)
@@ -142,6 +142,7 @@ if __name__ == '__main__':
         description='run decoding of the full model (RL)')
     parser.add_argument('--path', required=True, help='path to store/eval')
     parser.add_argument('--model_dir', help='root of the full model')
+    parser.add_argument('--data_dir', help='root the data')
 
     # dataset split
     data = parser.add_mutually_exclusive_group(required=True)
@@ -159,6 +160,7 @@ if __name__ == '__main__':
     args.cuda = torch.cuda.is_available() 
 
     #data_split = 'test' if args.test else 'val' 
+    DATA_DIR=args.data_dir
 
     cuda = torch.cuda.is_available()
 
