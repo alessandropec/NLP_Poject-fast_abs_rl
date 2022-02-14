@@ -102,9 +102,9 @@ python train_full_rl.py --data_dir=<PATH OF LABELLED DATA SPLITTED> --path<PATH 
 ```
 
 # Make evaluation
-Use the script decode_eval.py to get the results
+Use the script decode_eval.py to get the results, the validation data are used.
 ```
-python decode_eval.py --path=<PATH WHERE TO SAVE THE EXTRACTION> --model_dir=<PATH OF RL MODEL> --data_dir=<PATH OF DIR OF LABELLED DATA FOR VALUATION>      
+python decode_eval.py --path=<PATH WHERE TO SAVE THE EXTRACTION> --model_dir=<PATH OF RL MODEL> --data_dir=<PATH OF DIR OF LABELLED DATA>      
 ```
 # Our results
 
