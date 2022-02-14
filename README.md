@@ -6,7 +6,7 @@ You can
 2. Train the models
 3. Evaluate the models
 
-*A .yipnb demo file is avalaible [here](https://colab.research.google.com/drive/18i1xwIIXWRAvBrdyV0meeeAqe0ysddGr?usp=sharing)* 
+*.yipnb files are avalaible [here](https://drive.google.com/drive/folders/1IFG9wRRYJ_SAkOmde7L0A3_axs7eifMG?usp=sharing) you can find a demo for the full process and the script to evaluate our models* 
 
 # Datasets used
 
@@ -29,7 +29,9 @@ We report some statistics of the 3 datasets analyzed (Note we use only 450 docum
 | avg sents per doc  | 21,829                | 4,992     | 61,37     | 14,31     | 1329,99   | 78,1      |
 | tot_docs           | 2000                  | 2000      | 10000     | 10000     | 450       | 450       |
 
+# Models
 
+In the same folder of dataset are present different already trained model that can be used to run the evaluation.
 
 
 # Dependencies
