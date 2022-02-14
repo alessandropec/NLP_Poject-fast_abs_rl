@@ -161,7 +161,7 @@ def train(args):
         stop_reward_fn = compute_rouge_l
     elif args.stop_reward == 'rouge-1':
         stop_reward_fn = compute_rouge_n(n=1)
-    elif args.stop_reward == 'rouge-1':
+    elif args.stop_reward == 'rouge-2':
         stop_reward_fn = compute_rouge_n(n=2)
     else:
         stop_reward_fn = compute_rouge_n(n=2)
