@@ -78,6 +78,12 @@ def compute_rouge_l(output, reference, mode='f'):
             score = f_score
     return score
 
+def avg_rouges(output,reference):
+    rouge_l=compute_rouge_l(output,reference,mode="f")
+    rouge_1=compute_rouge_n(output,reference,n=1,mode="f")
+    rouge_2=compute_rouge_n(output,reference,n=2,mode="f")
+
+    return (rouge_1+rouge_2+rouge_l)/3
 
 def _lcs(a, b):
     """ compute the longest common subsequence between a and b"""

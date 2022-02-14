@@ -25,7 +25,7 @@ from rl import get_grad_fn
 from rl import A2CPipeline
 from decoding import load_best_ckpt
 from decoding import Abstractor, ArticleBatcher
-from metric import compute_rouge_l, compute_rouge_n
+from metric import avg_rouges, compute_rouge_l, compute_rouge_n
 
 
 MAX_ABS_LEN = 30
@@ -148,6 +148,9 @@ def train(args):
     )
     train_batcher, val_batcher = build_batchers(args.batch)
     
+    if args.reward=="avg_rouges":
+        reward_fn=avg_rouges
+
     if args.reward == 'rouge-l':
         reward_fn = compute_rouge_l
     elif args.reward == 'rouge-1':
@@ -228,7 +231,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_sent', action='store', default=None, type=int,
                         help='max number of sentences for each document')
     parser.add_argument('--reward', action='store', default='rouge-2',
-                        help='reward function for RL: rouge-1, rouge-2, rouge-l')
+                        help='reward function for RL: rouge-1, rouge-2, rouge-l, avg_rouges')
     parser.add_argument('--stop_reward', action='store', default='rouge-2',
                         help='stop reward function for RL: rouge-1, rouge-2, rouge-l')
     parser.add_argument('--lr', type=float, action='store', default=1e-4,
