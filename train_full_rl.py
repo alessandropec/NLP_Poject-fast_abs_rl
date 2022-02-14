@@ -147,10 +147,25 @@ def train(args):
         args.gamma, args.reward, args.stop, 'rouge-1'
     )
     train_batcher, val_batcher = build_batchers(args.batch)
-    # TODO different reward
-    reward_fn = compute_rouge_l
-    stop_reward_fn = compute_rouge_n(n=1)
-
+    
+    if args.reward == 'rouge-l':
+        reward_fn = compute_rouge_l
+    elif args.reward == 'rouge-1':
+        reward_fn = compute_rouge_n(n=1)
+    elif args.reward == 'rouge-1':
+        reward_fn = compute_rouge_n(n=2)
+    else:
+        reward_fn = compute_rouge_n(n=2)
+        
+    if args.stop_reward == 'rouge-l':
+        stop_reward_fn = compute_rouge_l
+    elif args.stop_reward == 'rouge-1':
+        stop_reward_fn = compute_rouge_n(n=1)
+    elif args.stop_reward == 'rouge-1':
+        stop_reward_fn = compute_rouge_n(n=2)
+    else:
+        stop_reward_fn = compute_rouge_n(n=2)
+            
     # save abstractor binary
     if args.abs_dir is not None:
         abs_ckpt = {}
@@ -212,8 +227,10 @@ if __name__ == '__main__':
     # training options
     parser.add_argument('--max_sent', action='store', default=None, type=int,
                         help='max number of sentences for each document')
-    parser.add_argument('--reward', action='store', default='rouge-l',
-                        help='reward function for RL')
+    parser.add_argument('--reward', action='store', default='rouge-2',
+                        help='reward function for RL: rouge-1, rouge-2, rouge-l')
+    parser.add_argument('--stop_reward', action='store', default='rouge-2',
+                        help='stop reward function for RL: rouge-1, rouge-2, rouge-l')
     parser.add_argument('--lr', type=float, action='store', default=1e-4,
                         help='learning rate')
     parser.add_argument('--decay', type=float, action='store', default=0.5,
