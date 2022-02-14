@@ -39,7 +39,7 @@ We report some statistics of the 3 datasets analyzed (Note we use only 450 docum
 - [tensorboardX](https://github.com/lanpa/tensorboard-pytorch)
 - [pyrouge](https://github.com/bheinzerling/pyrouge) (for evaluation)
 
-*A yipnb demo is avalaible [here](https://colab.research.google.com/drive/18i1xwIIXWRAvBrdyV0meeeAqe0ysddGr?usp=sharing) 
+*A .yipnb demo is avalaible [here](https://colab.research.google.com/drive/18i1xwIIXWRAvBrdyV0meeeAqe0ysddGr?usp=sharing)* 
 
 # Process data (full pipeline)
 To run the whole preprocess pipeline use the script inside preprocess folder prepro_pipeline.py, run the following command.
@@ -92,12 +92,16 @@ python train_abstractor.py --data_dir=<PATH TO ABST DATA SPLITTED> --path=<PATH 
 
 ## Train full rl model
 Use the script train_full_rl.py run the following command
-```
-python train_full_rl.py --data_dir=<PATH OF LABELLED DATA SPLITTED> --path<PATH WHERE TO SAVE THE MODEL> --ext_dir=<EXTRACTOR MODEL PATH> --abs_dir=<ABSTRACTOR MODEL PATH>
-                          
-```
-# Make evaluation
 
+```
+python train_full_rl.py --data_dir=<PATH OF LABELLED DATA SPLITTED> --path<PATH WHERE TO SAVE THE MODEL> --ext_dir=<EXTRACTOR MODEL PATH> --abs_dir=<ABSTRACTOR MODEL PATH>        
+```
+
+# Make evaluation
+Use the script decode_eval.py to get the results
+```
+python decode_eval.py --path=<PATH WHERE TO SAVE THE EXTRACTION> --model_dir=<PATH OF RL MODEL> --split=       
+```
 # Our results
 
 
