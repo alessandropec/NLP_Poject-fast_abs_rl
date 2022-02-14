@@ -1,5 +1,5 @@
 # Nome del paper
-This repository contains the code for our Deep Natural Language Processing exam paper at Politecnico of Turin.
+This repository contains the code for our "Deep Natural Language Processing" exam paper at Politecnico of Turin.
 
 You can
 1. Preprocess the data
@@ -11,7 +11,7 @@ You can
 # Datasets used
 
 1. FNS 2021 donwload [here](https://drive.google.com/drive/folders/1jWEzOjuC47BkrOpM6USdHGqVDisqZefm?usp=sharing) 
-2. Italian set of data extracted from WikiLingua donwload frome [here](https://drive.google.com/drive/folders/1KF0uJWvf1IhDXaMlqlS0jA0CIWmtC8Fd?usp=sharing)
+2. Italian set of data extracted from WikiLingua download frome [here](https://drive.google.com/drive/folders/1KF0uJWvf1IhDXaMlqlS0jA0CIWmtC8Fd?usp=sharing)
 
     a. wiki2k extraction of 2k paragraph and respective summaries
     
@@ -45,7 +45,9 @@ We report some statistics of the 3 datasets analyzed (Note we use only 450 docum
 
 # Process data (full pipeline)
 To run the whole preprocess pipeline use the script inside preprocess folder prepro_pipeline.py, run the following command.
+
 The script generate a folder containing different data processed: the documents, the summaries, the corpus, the BoW. 
+
 Note: the last argument is optionally and used for abstractive summarization since the summaries could have word not present in the documents.
 
 ```
@@ -102,7 +104,7 @@ python train_full_rl.py --data_dir=<PATH OF LABELLED DATA SPLITTED> --path<PATH 
 # Make evaluation
 Use the script decode_eval.py to get the results
 ```
-python decode_eval.py --path=<PATH WHERE TO SAVE THE EXTRACTION> --model_dir=<PATH OF RL MODEL> --split=       
+python decode_eval.py --path=<PATH WHERE TO SAVE THE EXTRACTION> --model_dir=<PATH OF RL MODEL> --data_dir<PATH OF DIR OF LABELLED DATA FOR VALUATION>      
 ```
 # Our results
 
