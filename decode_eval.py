@@ -83,7 +83,7 @@ def decode_eval(save_path, model_dir, split, max_sent, batch_size, max_len, cuda
     dec_log['abstractor'] = meta['net_args']['abstractor']
     dec_log['extractor'] = meta['net_args']['extractor']
     dec_log['rl'] = True
-    dec_log['split'] = split
+    #dec_log['split'] = split
     with open(join(save_path, 'log.json'), 'w') as f:
         json.dump(dec_log, f, indent=4)
 
@@ -145,8 +145,8 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', help='root the data')
 
     # dataset split
-    data = parser.add_mutually_exclusive_group(required=True)
-    data.add_argument('--split', action='store', help='use split set')
+    #data = parser.add_mutually_exclusive_group(required=True)
+    #data.add_argument('--split', action='store', help='use split set')
 
     # decode options
     parser.add_argument('--batch', type=int, action='store', default=2,
