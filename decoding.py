@@ -96,7 +96,7 @@ class Abstractor(object):
         dec_args, id2word = self._prepro(raw_article_sents)
         decs, attns = self._net.batch_decode(*dec_args)
         def argmax(arr, keys):
-            return arr[max(range(len(arr)), key=lambda i: keys[i].item())]
+            return arr[max(range(len(arr)-1), key=lambda i: keys[i].item())]
         dec_sents = []
         for i, raw_words in enumerate(raw_article_sents):
             dec = []
