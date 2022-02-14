@@ -36,7 +36,7 @@ def a2c_validate(agent, abstractor, loader):
                 summs = all_summs[j:j+n]
                 # python ROUGE-1 (not official evaluation)
                 avg_reward += compute_rouge_n(list(concat(summs)),
-                                              list(concat(abs_sents)), n=1)
+                                              list(concat(abs_sents)), n=2)
                 i += 1
     avg_reward /= (i/100)
     print('finished in {}! avg reward: {:.2f}'.format(
