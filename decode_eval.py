@@ -53,7 +53,7 @@ class EvalDataset(CnnDmDataset):
             abs_sents = js_data['gold']
         return art_sents, abs_sents
 
-def decode_eval(save_path, model_dir, split, max_sent, batch_size, max_len, cuda, coll_fn=coll):
+def decode_eval(save_path, model_dir, max_sent, batch_size, max_len, cuda, coll_fn=coll):
     start = time()
     # setup model
     with open(join(model_dir+'/meta.json')) as f:
@@ -164,6 +164,6 @@ if __name__ == '__main__':
 
     cuda = torch.cuda.is_available()
 
-    decode_eval(args.path, args.model_dir, args.split, args.max_sent, 
+    decode_eval(args.path, args.model_dir, args.max_sent, 
                 args.batch, args.max_dec_word, cuda)
 
