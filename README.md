@@ -6,7 +6,7 @@ You can
 2. Train the models
 3. Evaluate the models
 
-*.yipnb files are avalaible [here](https://drive.google.com/drive/folders/1IFG9wRRYJ_SAkOmde7L0A3_axs7eifMG?usp=sharing) you can find a demo for the full process and the script to evaluate our models* 
+*.yipnb files are avalaible [here](https://drive.google.com/drive/folders/1IFG9wRRYJ_SAkOmde7L0A3_axs7eifMG?usp=sharing) you can find a tutorial for the full process and the script to evaluate our models* 
 
 # Datasets used
 
