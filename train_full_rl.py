@@ -152,7 +152,7 @@ def train(args):
         reward_fn = compute_rouge_l
     elif args.reward == 'rouge-1':
         reward_fn = compute_rouge_n(n=1)
-    elif args.reward == 'rouge-1':
+    elif args.reward == 'rouge-2':
         reward_fn = compute_rouge_n(n=2)
     else:
         reward_fn = compute_rouge_n(n=2)
