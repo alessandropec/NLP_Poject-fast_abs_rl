@@ -172,6 +172,7 @@ class PtrScorer(nn.Module):
             score = self._score_linear(output)
             scores.append(score)
             lstm_in = output
+            lstm_states = (h, c)
         return scores
 
     @staticmethod
