@@ -75,77 +75,6 @@ class LSTMEncoder(nn.Module):
         return self._lstm.bidirectional
 
 
-class ExtractSumm(nn.Module):
-    """ ff-ext """
-    def __init__(self, vocab_size, emb_dim,
-                 conv_hidden, lstm_hidden, lstm_layer,
-                 bidirectional, dropout=0.0):
-        super().__init__()
-        self._sent_enc = ConvSentEncoder(
-            vocab_size, emb_dim, conv_hidden, dropout)
-        self._art_enc = LSTMEncoder(
-            3*conv_hidden, lstm_hidden, lstm_layer,
-            dropout=dropout, bidirectional=bidirectional
-        )
-
-        lstm_out_dim = lstm_hidden * (2 if bidirectional else 1)
-        self._sent_linear = nn.Linear(lstm_out_dim, 1)
-        self._art_linear = nn.Linear(lstm_out_dim, lstm_out_dim)
-
-    def forward(self, article_sents, sent_nums):
-        enc_sent, enc_art = self._encode(article_sents, sent_nums)
-        saliency = torch.matmul(enc_sent, enc_art.unsqueeze(2))
-        saliency = torch.cat(
-            [s[:n] for s, n in zip(saliency, sent_nums)], dim=0)
-        content = self._sent_linear(
-            torch.cat([s[:n] for s, n in zip(enc_sent, sent_nums)], dim=0)
-        )
-        logit = (content + saliency).squeeze(1)
-        return logit
-
-    def extract(self, article_sents, sent_nums=None, k=4):
-        """ extract top-k scored sentences from article (eval only)"""
-        enc_sent, enc_art = self._encode(article_sents, sent_nums)
-        saliency = torch.matmul(enc_sent, enc_art.unsqueeze(2))
-        content = self._sent_linear(enc_sent)
-        logit = (content + saliency).squeeze(2)
-        if sent_nums is None:  # test-time extract only
-            assert len(article_sents) == 1
-            n_sent = logit.size(1)
-            extracted = logit[0].topk(
-                k if k < n_sent else n_sent, sorted=False  # original order
-            )[1].tolist()
-        else:
-            extracted = [l[:n].topk(k if k < n else n)[1].tolist()
-                         for n, l in zip(sent_nums, logit)]
-        return extracted
-
-    def _encode(self, article_sents, sent_nums):
-        if sent_nums is None:  # test-time extract only
-            enc_sent = self._sent_enc(article_sents[0]).unsqueeze(0)
-        else:
-            max_n = max(sent_nums)
-            enc_sents = [self._sent_enc(art_sent)
-                         for art_sent in article_sents]
-            def zero(n, device):
-                z = torch.zeros(n, self._art_enc.input_size).to(device)
-                return z
-            enc_sent = torch.stack(
-                [torch.cat([s, zero(max_n-n, s.device)],
-                           dim=0) if n != max_n
-                 else s
-                 for s, n in zip(enc_sents, sent_nums)],
-                dim=0
-            )
-        lstm_out = self._art_enc(enc_sent, sent_nums)
-        enc_art = F.tanh(
-            self._art_linear(sequence_mean(lstm_out, sent_nums, dim=1)))
-        return lstm_out, enc_art
-
-    def set_embedding(self, embedding):
-        self._sent_enc.set_embedding(embedding)
-
-
 class LSTMPointerNet(nn.Module):
     """Pointer network as in Vinyals et al """
     def __init__(self, input_dim, n_hidden, n_layer,
@@ -181,10 +110,15 @@ class LSTMPointerNet(nn.Module):
         self._n_hop = n_hop
 
     def forward(self, attn_mem, mem_sizes, lstm_in):
-        """atten_mem: Tensor of size [batch_size, max_sent_num, input_dim]"""
+        """
+        atten_mem: Tensor of size [batch_size, max_sent_num, sent_emb_dim] = batch of vector representations of the sentences of each report
+        mem_sizes = number of sentences in each report
+        lstm_in: Tensor of size [batch_size, max_golden_sent_num, sent_emb_dim] = batch of ground truth extracted sentences
+        """
         attn_feat, hop_feat, lstm_states, init_i = self._prepare(attn_mem)
-        lstm_in = torch.cat([init_i, lstm_in], dim=1).transpose(0, 1)
-        query, final_states = self._lstm(lstm_in, lstm_states)
+        lstm_in = torch.cat([init_i, lstm_in], dim=1).transpose(0, 1) # the input is the concatenation of the initialized input and of the ground truth sentences
+        # it should be noted that this happens only in training, in fact during training we apply "teacher forcing", which consists in forcing as input the actual ground truth at each time step of the LSTM instead of the previously predicted output
+        query, final_states = self._lstm(lstm_in, lstm_states)  # query: Tensor of size [number of sentences extracted, batch size, hidden size]
         query = query.transpose(0, 1)
         for _ in range(self._n_hop):
             query = LSTMPointerNet.attention(
@@ -203,7 +137,7 @@ class LSTMPointerNet(nn.Module):
         extracts = []
         for _ in range(k):
             h, c = self._lstm_cell(lstm_in, lstm_states)
-            query = h[-1]
+            query = h[-1] # take only the last layer
             for _ in range(self._n_hop):
                 query = LSTMPointerNet.attention(
                     hop_feat, query, self._hop_v, self._hop_wq, mem_sizes)
@@ -211,22 +145,24 @@ class LSTMPointerNet(nn.Module):
                 attn_feat, query, self._attn_v, self._attn_wq)
             score = score.squeeze()
             for e in extracts:
-                score[e] = -1e6
-            ext = score.max(dim=0)[1].item()
+                score[e] = -1e6 # put the probability of extracting the same sentence to 0, this cant be done during the pointer net training because this is not differentiable
+            ext = score.max(dim=0)[1].item() # extract the sentence with the maximum score (i.e. the maximum "attention")
             extracts.append(ext)
-            lstm_states = (h, c)
-            lstm_in = attn_mem[:, ext, :]
+            lstm_states = (h, c) # different from the training, in this case there is no "teacher forcing", so as input to the next step using the current states
+            lstm_in = attn_mem[:, ext, :] # also in this case use previous output as input
         return extracts
 
     def _prepare(self, attn_mem):
+        # atten_mem: Tensor of size [batch_size, max_sent_num, sent_emb_dim] = batch of vector representations of the sentences of each report
+        
         attn_feat = torch.matmul(attn_mem, self._attn_wm.unsqueeze(0))
         hop_feat = torch.matmul(attn_mem, self._hop_wm.unsqueeze(0))
-        bs = attn_mem.size(0)
-        n_l, d = self._init_h.size()
+        bs = attn_mem.size(0) # batch size
+        n_l, d = self._init_h.size() # number of layer and hidden size
         size = (n_l, bs, d)
         lstm_states = (self._init_h.unsqueeze(1).expand(*size).contiguous(),
                        self._init_c.unsqueeze(1).expand(*size).contiguous())
-        d = self._init_i.size(0)
+        d = self._init_i.size(0) # embedding dimension
         init_i = self._init_i.unsqueeze(0).unsqueeze(1).expand(bs, 1, d)
         return attn_feat, hop_feat, lstm_states, init_i
 
@@ -273,13 +209,20 @@ class PtrExtractSumm(nn.Module):
         )
 
     def forward(self, article_sents, sent_nums, target):
+        '''
+        article sents = batch of reports -> [batch_size, number of sentences, number of words, w2v embedding dimension]
+        sent_nums = number of sentence for each report in the batch
+        target = ground truth indices of the sentences to extract
+        '''
         enc_out = self._encode(article_sents, sent_nums)
+        # at this point in enc_out the sentences have gone through the conv and an LSTM
+        # in enc_out we have the vector representation of each sentence starting from the word embeddings contained in each sentence
         bs, nt = target.size()
         d = enc_out.size(2)
         ptr_in = torch.gather(
             enc_out, dim=1, index=target.unsqueeze(2).expand(bs, nt, d)
-        )
-        output = self._extractor(enc_out, sent_nums, ptr_in)
+        ) # select the sentences corresponding to the indices of the ground truth extracted sentences
+        output = self._extractor(enc_out, sent_nums, ptr_in) # _extractor is the PointerNet
         return output
 
     def extract(self, article_sents, sent_nums=None, k=4):
@@ -292,7 +235,7 @@ class PtrExtractSumm(nn.Module):
             enc_sent = self._sent_enc(article_sents[0]).unsqueeze(0)
         else:
             max_n = max(sent_nums)
-            enc_sents = [self._sent_enc(art_sent)
+            enc_sents = [self._sent_enc(art_sent) # create a vector representation for each sentence starting from its word embeddings
                          for art_sent in article_sents]
             def zero(n, device):
                 z = torch.zeros(n, self._art_enc.input_size).to(device)
@@ -304,7 +247,8 @@ class PtrExtractSumm(nn.Module):
                  for s, n in zip(enc_sents, sent_nums)],
                 dim=0
             )
-        lstm_out = self._art_enc(enc_sent, sent_nums)
+            # in enc_sent we pad with zero-vectors (vectors made of all zeros) so that all the reports in the batch have the same size
+        lstm_out = self._art_enc(enc_sent, sent_nums) # to further encode semantic dependencies between sentences we use a BiLSTM
         return lstm_out
 
     def set_embedding(self, embedding):
