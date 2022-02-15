@@ -54,41 +54,54 @@ def a2c_train_step(agent, abstractor, loader, opt, grad_fn,
     ext_sents = []
     art_batch, abs_batch = next(loader)
     for raw_arts in art_batch:
-        #print(raw_arts)
         (inds, ms), bs = agent(raw_arts)
-        #print("Indexs",inds,"\n")
+        # inds = indices of the extracted sentences
+        # ms = probability distribution over the sentences
+        # bs = baseline, so the predicted expected reward for all possible action
+        # the baseline is obtained through regression by adding a linear layer on the logits of the PointerNet
+        
         baselines.append(bs)
         indices.append(inds)
         probs.append(ms)
         ext_sents += [raw_arts[idx.item()]
                       for idx in inds if idx.item() < len(raw_arts)]
-    #print("Ext",ext_sents,"\n")
     reward=None
-    #ext_sents=[]
     
     with torch.no_grad():
         summaries = abstractor(ext_sents)
     print("Sum",summaries,"\n")
-    i = 0
+    i = 0 # start of the sliding window per batch, this will have to be updated with the length of the current element in the batch
     rewards = []
     avg_reward = 0
-    for inds, abss in zip(indices, abs_batch):
+    for inds, abss in zip(indices, abs_batch): # indices of the extracted sentences and golden summaries sentences
         rs = ([reward_fn(summaries[i+j], abss[j])
             for j in range(min(len(inds)-1, len(abss)))]
             + [0 for _ in range(max(0, len(inds)-1-len(abss)))]
             + [stop_coeff*stop_reward_fn(
                 list(concat(summaries[i:i+len(inds)-1])),
                 list(concat(abss)))])
+        
+        # in rs we have a lot of stuff summed, lets understand why:
+        # first of all note that rs is the same length as the number of extracted sentences
+        # it is the sum of three different lists:
+            # 1) for each extracted sentence calculate the rouge reward with the corresponding golden summary sentence.
+            # 2) if the extracted sentences are more than the golden summary sentences, then pad with 0.
+            # 3) finally the stop reward, where we look at the reward associated with stopping at that particular number of sentences
+            #    calculated as the total rouge score between extracted and golden summary sentences multiplied by the stop coefficient.
+
         assert len(rs) == len(inds)
-        avg_reward += rs[-1]/stop_coeff
-        i += len(inds)-1
-        # compute discounted rewards
+
+        avg_reward += rs[-1]/stop_coeff  # as avg reward we use the rouge calculated between all the extracted and golden summary sentences
+
+        i += len(inds)-1 # move the window to the next batch
+
+        # compute discounted rewards -> discount factor essentially determines how much the reinforcement learning agents cares about rewards in the distant future relative to those in the immediate future
         R = 0
         disc_rs = []
-        for r in rs[::-1]:
-            R = r + gamma * R
-            disc_rs.insert(0, R)
-        rewards += disc_rs
+        for r in rs[::-1]: # take each element in rs starting from the last in reverse order
+            R = r + gamma * R # sum the current reward and multiply the previous ones by the discount factor, since we care less about rewards in the future
+            disc_rs.insert(0, R) # put R at the first index of the list disc_rs
+        rewards += disc_rs # concat to the rewards list (list because one for each element in the batch)
     indices = list(concat(indices))
     probs = list(concat(probs))
     baselines = list(concat(baselines))
@@ -100,11 +113,15 @@ def a2c_train_step(agent, abstractor, loader, opt, grad_fn,
     avg_advantage = 0
     losses = []
     for action, p, r, b in zip(indices, probs, reward, baseline):
+        # action is the extracted sentence
+        # p is the probability distribution at that step of extracting sentences
+        # r is the discont reward we calculated
+        # b is the baseline (i.e. the predicted expected reward for all possible actions at a certain time step) needed to calculate the advantage
         advantage = r - b
         avg_advantage += advantage
-        losses.append(-p.log_prob(action)
-                    * (advantage/len(indices))) # divide by T*B
-    critic_loss = F.mse_loss(baseline, reward)
+        losses.append(-p.log_prob(action) # log_prob returns the log of the probability density/mass function evaluated at value
+                    * (advantage/len(indices))) # for the reward in the case of A2C we use the avg advantage
+    critic_loss = F.mse_loss(baseline, reward) # to train the critic we use the MSE loss (quadratic)
     autograd.backward(
     [critic_loss.unsqueeze(0)] + losses,
     [torch.ones(1).to(critic_loss.device)]*(1+len(losses))
@@ -165,7 +182,7 @@ class A2CPipeline(BasicPipeline):
         self._stop_reward_fn = stop_reward_fn
         self._stop_coeff = stop_coeff
 
-        self._n_epoch = 0  # epoch not very useful?
+        self._n_epoch = 0
 
     def batches(self):
         raise NotImplementedError('A2C does not use batcher')
