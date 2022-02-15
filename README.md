@@ -116,8 +116,8 @@ For the full settings of the model refer to the appendix in the paper.
 
 |             | wiki rl rouge-2 | wiki rl rouge-L | wiki rl avg-rouges | fns rl rouge-2 | fns rl rouge-L | fns rl avg-rouges |
 |-------------|-----------------|-----------------|--------------------|----------------|----------------|-------------------|
-| avg rouge-2 | 0,0282          | 0,0273          |                    | 0,0413         | 0,218          | 0,0732            |
-| avg rouge-1 | 0,154           | 0,149           |                    | 0,139          | 0,348          | 0,237             |
-| avg rouge-L | 0,152           | 0,145           |                    | 0,134          | 0,344          | 0,228             |
+| avg rouge-2 | 0,0282          | 0,0273          | 0,0255              | 0,0413         | 0,218          | 0,0732            |
+| avg rouge-1 | 0,154           | 0,149           | 0,132               | 0,139          | 0,348          | 0,237             |
+| avg rouge-L | 0,152           | 0,145           | 0,131               | 0,134          | 0,344          | 0,228             |
 
 
