@@ -1,7 +1,7 @@
 # An exploration of hybrid neural doc summarization task
 This repository contains the code for our "Deep Natural Language Processing" exam paper at Politecnico of Turin (years 2022).
 
-Starting from the report of the 2nd classified at [FNS-2021 challenge](http://wp.lancs.ac.uk/cfie/fns2021/) and inspired by the paper [Fast Abstractive Summarization with Reinforce-Selected Sentence Rewriting](https://arxiv.org/abs/1805.11080), we explore the task of document summarization with an approach that can be used both for abstractive and extractive summaries, we reproduce the result of the cited report and extend those on an abstractive italian dataset, moreover we train different net with different settings in order to explore the different behaviour of the RL model respect to the different rouges score given as reward functions.
+Starting from the report of the 2nd classified at [FNS-2021 challenge](http://wp.lancs.ac.uk/cfie/fns2021/) and inspired by the paper [Fast Abstractive Summarization with Reinforce-Selected Sentence Rewriting](https://arxiv.org/abs/1805.11080), we explore the task of document summarization with an approach that can be used both for abstractive and extractive summaries, we reproduce the result of the cited report and extend this task on an abstractive italian dataset. Moreover we train different models with different parameters in order to explore the behaviours of the RL model with different ROUGE score given as reward functions.
 
 You can
 1. Preprocess the data
