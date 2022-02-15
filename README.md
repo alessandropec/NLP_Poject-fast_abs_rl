@@ -1,5 +1,8 @@
 # Nome del paper
 This repository contains the code for our "Deep Natural Language Processing" exam paper at Politecnico of Turin.
+Starting from the report of the 2nd classified at [FNS-2021 challenge](http://wp.lancs.ac.uk/cfie/fns2021/) and inspired by the paper [Fast Abstractive Summarization with Reinforce-Selected Sentence Rewriting](https://arxiv.org/abs/1805.11080).
+
+We explore the task of document summarization with an approach that can be used both for abstractive and extractive summaries, we reproduce the result of the cited report and extend those on an abstractive italian dataset, moreover we train different net with different settings in order to explore the different behaviour of the RL model respect to the different rouges score given as reward functions.
 
 You can
 1. Preprocess the data
@@ -8,13 +11,24 @@ You can
 
 *.yipnb files are avalaible [here](https://drive.google.com/drive/folders/1IFG9wRRYJ_SAkOmde7L0A3_axs7eifMG?usp=sharing) you can find a tutorial for the full process and the script to evaluate our models* 
 
+# Dependencies
+- **Python 3** (tested on python 3.6)
+- [PyTorch](https://github.com/pytorch/pytorch) 0.4.0
+    - with GPU and CUDA enabled installation (though the code is runnable on CPU, it would be way too slow)
+- [gensim](https://github.com/RaRe-Technologies/gensim)
+- [cytoolz](https://github.com/pytoolz/cytoolz)
+- [tensorboardX](https://github.com/lanpa/tensorboard-pytorch)
+- [pyrouge](https://github.com/bheinzerling/pyrouge) (for evaluation)
+
+
+
 # Datasets used
 
 1. FNS 2021 donwload [here](https://drive.google.com/drive/folders/1jWEzOjuC47BkrOpM6USdHGqVDisqZefm?usp=sharing) 
 2. Italian set of data extracted from WikiLingua download frome [here](https://drive.google.com/drive/folders/1KF0uJWvf1IhDXaMlqlS0jA0CIWmtC8Fd?usp=sharing)
 For the italian dataset we refer to it as wiki10k since is an extraction of 10k document and respective summaries.
 
-We report some statistics of the 3 datasets analyzed (Note we use only 450 document for fns)
+We report some statistics of the datasets analyzed (Note we use only 450 document for fns due to limited HW resource)
 
 |                    | wiki10k   | wiki10k   | fns-2021  |fns-2021           |
 |--------------------|-----------|-----------|-----------|-----------|
@@ -29,17 +43,6 @@ We report some statistics of the 3 datasets analyzed (Note we use only 450 docum
 # Models
 
 In the same folder of dataset are present different already trained model that can be used to run the evaluation.
-
-
-# Dependencies
-- **Python 3** (tested on python 3.6)
-- [PyTorch](https://github.com/pytorch/pytorch) 0.4.0
-    - with GPU and CUDA enabled installation (though the code is runnable on CPU, it would be way too slow)
-- [gensim](https://github.com/RaRe-Technologies/gensim)
-- [cytoolz](https://github.com/pytoolz/cytoolz)
-- [tensorboardX](https://github.com/lanpa/tensorboard-pytorch)
-- [pyrouge](https://github.com/bheinzerling/pyrouge) (for evaluation)
-
 
 
 # Process data (full pipeline)
@@ -108,5 +111,14 @@ Use the script decode_eval.py to get the results, the validation data are used.
 python decode_eval.py --path=<PATH WHERE TO SAVE THE EXTRACTION> --model_dir=<PATH OF RL MODEL> --data_dir=<PATH OF DIR OF LABELLED DATA>      
 ```
 # Our results
+We train different models on different datasets and with different settings (columns) and evaluate those with the rouge-1, rouge-2 and rouge-L computed for each generated summary against the the reference and averaged over the number of documents.
+
+For the full settings of the model refer to the appendix in the paper.
+
+|             | wiki rl rouge-2 | wiki rl rouge-L | wiki rl avg-rouges | fns rl rouge-2 | fns rl rouge-L | fns rl avg-rouges |
+|-------------|-----------------|-----------------|--------------------|----------------|----------------|-------------------|
+| avg rouge-2 | 0,0282          | 0,0273          |                    | 0,0413         | 0,218          | 0,0732            |
+| avg rouge-1 | 0,154           | 0,149           |                    | 0,139          | 0,348          | 0,237             |
+| avg rouge-L | 0,152           | 0,145           |                    | 0,134          | 0,344          | 0,228             |
 
 
