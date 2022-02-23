@@ -137,12 +137,19 @@ class LSTMPointerNet(nn.Module):
         extracts = []
         for _ in range(k):
             h, c = self._lstm_cell(lstm_in, lstm_states)
-            query = h[-1] # take only the last layer
+            query = h[-1] # take only the last layer 
             for _ in range(self._n_hop):
                 query = LSTMPointerNet.attention(
                     hop_feat, query, self._hop_v, self._hop_wq, mem_sizes)
+                # hop_feat are the hidden states of the encoder (sentence representations) multiplied by hop_wm
+                # input query (pre-hop) is the output of the decoder
+                # output query (post-hop) is the context vector, we need the hop because we need to first calculate the context vector, with which then we calculate the extraction probabilities 
+            
+            # query is now the context vector after the hop
+            # attn_feat are the hidden states of the encoder (sentence representations) multiplied by attn_wm
             score = LSTMPointerNet.attention_score(
                 attn_feat, query, self._attn_v, self._attn_wq)
+            
             score = score.squeeze()
             for e in extracts:
                 score[e] = -1e6 # put the probability of extracting the same sentence to 0, this cant be done during the pointer net training because this is not differentiable
