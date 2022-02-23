@@ -67,10 +67,14 @@ class Seq2SeqSumm(nn.Module):
         return logit
 
     def encode(self, article, art_lens=None):
+        '''
+        article: [batch_size, num_words, emb_size]
+        art_lens = number of words for each sentence
+        '''
         size = (
-            self._init_enc_h.size(0),
-            len(art_lens) if art_lens else 1,
-            self._init_enc_h.size(1)
+            self._init_enc_h.size(0), # n_layer (*2 if bidir)
+            len(art_lens) if art_lens else 1, # batch_size
+            self._init_enc_h.size(1) # hidden size
         )
         init_enc_states = (
             self._init_enc_h.unsqueeze(1).expand(*size),
@@ -80,21 +84,32 @@ class Seq2SeqSumm(nn.Module):
             article, self._enc_lstm, art_lens,
             init_enc_states, self._embedding
         )
+        # enc_art: [num words, batch size, hidden size (*2 if bidir)] contains hidden vector at each time step of the last layer
+        # final_states: tuple of [num_layers(*2 if bidir), batch size, hidden size]
         if self._enc_lstm.bidirectional:
             h, c = final_states
             final_states = (
                 torch.cat(h.chunk(2, dim=0), dim=2),
                 torch.cat(c.chunk(2, dim=0), dim=2)
             )
+            # separate the two directions with chunk and then concatenate them
+            # final_states: tuple of [num_layers, batch size, hidden size (*2 if bidir)]
         init_h = torch.stack([self._dec_h(s)
                               for s in final_states[0]], dim=0)
         init_c = torch.stack([self._dec_c(s)
                               for s in final_states[1]], dim=0)
+        # _dec_h and _dec_c are NNs to remap the final encoder states to the decoder
+        # init_h and init_c : [num_layers, batch_size, hidden size] 
         init_dec_states = (init_h, init_c)
         attention = torch.matmul(enc_art, self._attn_wm).transpose(0, 1)
+        # attention: [batch_size, num words, hidden size] alignment vector a_t, source hidden states (after encoder so aware of context)
         init_attn_out = self._projection(torch.cat(
             [init_h[-1], sequence_mean(attention, art_lens, dim=1)], dim=1
         ))
+        # sequence_mean(attention, art_lens, dim=1) is the initial context vector, for now not weighted avg but normal avg
+        # concatenate last layer of h ([batch size, hidden size]) with sequence mean of attention (where we sum all the words in a sentence and divide by the length of the sentence)
+        # init_attn_out: [batch size, embedding size]
+        # init_attn_out represents the initial attentional hidden state
         return attention, (init_dec_states, init_attn_out)
 
     def batch_decode(self, article, art_lens, go, eos, max_len):
@@ -145,12 +160,19 @@ class AttentionalLSTMDecoder(object):
         self._projection = projection
 
     def __call__(self, attention, init_states, target):
-        max_len = target.size(1)
+        # attention = (attention, mask, extend_art, extend_vsize)
+        # init_states = init_dec_states (tuple of [num_layers, batch_size, hidden size],[batch size, embedding size])
+        # target = abstract
+        max_len = target.size(1) # max number of words in the target
         states = init_states
         logits = []
         for i in range(max_len):
-            tok = target[:, i:i+1]
+            tok = target[:, i:i+1] # teacher forcing, as input provide the ground truth at each step
             logit, states, _ = self._step(tok, states, attention)
+            # logit = probability distribution over two vocabs
+            # states = tuple of:
+                # decoder states at current time step (h,c)
+                # current attentional hidden state, that will be concatenated to the current ground truth token to predict next token
             logits.append(logit)
         logit = torch.stack(logits, dim=1)
         return logit
