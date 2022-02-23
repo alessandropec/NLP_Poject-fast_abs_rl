@@ -119,12 +119,12 @@ class PtrExtractorRLStop(PtrExtractorRL):
             else:
                 out = score.max(dim=1, keepdim=True)[1]
             outputs.append(out)
-            if out.item() == max_step:#TO DO:deve estrarre almeno due frasi
+            if out.item() == max_step:
                 break
             lstm_in = attn_mem[out.item()].unsqueeze(0)
             lstm_states = (h, c)
         if dists:
-            # return distributions only when not empty (trining)
+            # return distributions only when not empty (training)
             return outputs, dists
         else:
             return outputs
@@ -196,19 +196,20 @@ class ActorCritic(nn.Module):
         self._batcher = art_batcher
 
     def forward(self, raw_article_sents, n_abs=None):
+        # n_abs is the number of sentences to be extracted from the report
         article_sent = self._batcher(raw_article_sents)
         enc_sent = self._sent_enc(article_sent).unsqueeze(0)
         enc_art = self._art_enc(enc_sent).squeeze(0)
         if n_abs is not None and not self.training:
-            n_abs = min(len(raw_article_sents), n_abs)
-        if n_abs is None:
+            n_abs = min(len(raw_article_sents), n_abs) # if n_abs is greater than the number of sentences in the report then extract all the sentences in the report of course, we cant extract more
+        if n_abs is None: 
             outputs = self._ext(enc_art)
         else:
             outputs = self._ext(enc_art, n_abs)
         if self.training:
             if n_abs is None:
                 n_abs = len(outputs[0])
-            scores = self._scr(enc_art, n_abs)
+            scores = self._scr(enc_art, n_abs) # estimate baselines for each extracted sentence
             return outputs, scores
         else:
             return outputs
