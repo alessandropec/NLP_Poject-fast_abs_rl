@@ -27,6 +27,9 @@ class _CopyLinear(nn.Module):
             self.register_parameter(None, '_b')
 
     def forward(self, context, state, input_):
+        # context = context vector
+        # state = current last layer of the hidden state of the decoder
+        # input_ = concatenation of previous prediction and previous attentional hidden state
         output = (torch.matmul(context, self._v_c.unsqueeze(1))
                   + torch.matmul(state, self._v_s.unsqueeze(1))
                   + torch.matmul(input_, self._v_i.unsqueeze(1)))
@@ -47,7 +50,15 @@ class CopySumm(Seq2SeqSumm):
         )
 
     def forward(self, article, art_lens, abstract, extend_art, extend_vsize):
+        '''
+        article: [batch_size, num_words, emb_size]
+        art_lens = number of words for each sentence
+        '''
         attention, init_dec_states = self.encode(article, art_lens)
+        # attention: [batch size, num words, hidden size] alignment vector, source hidden states
+        # init_dec_states: 
+            # 1) tuple of [num_layers, batch_size, hidden size] with initial decoder states (h,c)
+            # 2) [batch size, embedding size] initial attentional hidden state
         mask = len_mask(art_lens, attention.device).unsqueeze(-2)
         logit = self._decoder(
             (attention, mask, extend_art, extend_vsize),
@@ -94,82 +105,6 @@ class CopySumm(Seq2SeqSumm):
                 tok[0, 0] = unk
         return outputs, attns
 
-    def batched_beamsearch(self, article, art_lens,
-                           extend_art, extend_vsize,
-                           go, eos, unk, max_len, beam_size, diverse=1.0):
-        batch_size = len(art_lens)
-        vsize = self._embedding.num_embeddings
-        attention, init_dec_states = self.encode(article, art_lens)
-        mask = len_mask(art_lens, attention.device).unsqueeze(-2)
-        all_attention = (attention, mask, extend_art, extend_vsize)
-        attention = all_attention
-        (h, c), prev = init_dec_states
-        all_beams = [bs.init_beam(go, (h[:, i, :], c[:, i, :], prev[i]))
-                     for i in range(batch_size)]
-        finished_beams = [[] for _ in range(batch_size)]
-        outputs = [None for _ in range(batch_size)]
-        for t in range(max_len):
-            toks = []
-            all_states = []
-            for beam in filter(bool, all_beams):
-                token, states = bs.pack_beam(beam, article.device)
-                toks.append(token)
-                all_states.append(states)
-            token = torch.stack(toks, dim=1)
-            states = ((torch.stack([h for (h, _), _ in all_states], dim=2),
-                       torch.stack([c for (_, c), _ in all_states], dim=2)),
-                      torch.stack([prev for _, prev in all_states], dim=1))
-            token.masked_fill_(token >= vsize, unk)
-
-            topk, lp, states, attn_score = self._decoder.topk_step(
-                token, states, attention, beam_size)
-
-            batch_i = 0
-            for i, (beam, finished) in enumerate(zip(all_beams,
-                                                     finished_beams)):
-                if not beam:
-                    continue
-                finished, new_beam = bs.next_search_beam(
-                    beam, beam_size, finished, eos,
-                    topk[:, batch_i, :], lp[:, batch_i, :],
-                    (states[0][0][:, :, batch_i, :],
-                     states[0][1][:, :, batch_i, :],
-                     states[1][:, batch_i, :]),
-                    attn_score[:, batch_i, :],
-                    diverse
-                )
-                batch_i += 1
-                if len(finished) >= beam_size:
-                    all_beams[i] = []
-                    outputs[i] = finished[:beam_size]
-                    # exclude finished inputs
-                    (attention, mask, extend_art, extend_vsize
-                    ) = all_attention
-                    masks = [mask[j] for j, o in enumerate(outputs)
-                             if o is None]
-                    ind = [j for j, o in enumerate(outputs) if o is None]
-                    ind = torch.LongTensor(ind).to(attention.device)
-                    attention, extend_art = map(
-                        lambda v: v.index_select(dim=0, index=ind),
-                        [attention, extend_art]
-                    )
-                    if masks:
-                        mask = torch.stack(masks, dim=0)
-                    else:
-                        mask = None
-                    attention = (
-                        attention, mask, extend_art, extend_vsize)
-                else:
-                    all_beams[i] = new_beam
-                    finished_beams[i] = finished
-            if all(outputs):
-                break
-        else:
-            for i, (o, f, b) in enumerate(zip(outputs,
-                                              finished_beams, all_beams)):
-                if o is None:
-                    outputs[i] = (f+b)[:beam_size]
-        return outputs
 
 
 class CopyLSTMDecoder(AttentionalLSTMDecoder):
@@ -178,24 +113,41 @@ class CopyLSTMDecoder(AttentionalLSTMDecoder):
         self._copy = copy
 
     def _step(self, tok, states, attention):
-        prev_states, prev_out = states
+        # tok = previous ground truth
+        # states = (tuple of [num_layers, batch_size, hidden size]),[batch size, embedding size]
+        # attention = (attention, mask, extend_art, extend_vsize)
+
+        prev_states, prev_out = states 
+        # prev_state: tuple of [num_layers, batch_size, hidden size]
+        # prev_out: [batch size, embedding size]
         lstm_in = torch.cat(
             [self._embedding(tok).squeeze(1), prev_out],
             dim=1
         )
+        # lstm_in is the concatenation of the previous token (during training is the previous ground truth, during val it is the previous predicted token) and of the previous attentional hidden state
         states = self._lstm(lstm_in, prev_states)
-        lstm_out = states[0][-1]
+        # _lstm has parameters (2*emb_dim, n_hidden, n_layer)
+        # states = tuple:
+            # new_h: [num layers, batch size, hidden size]
+            # new_c: [num layers, batch size, hidden size]
+
+        lstm_out = states[0][-1] # last layer of the new_h
         query = torch.mm(lstm_out, self._attn_w)
+        # query: [batch size, hidden size]
         attention, attn_mask, extend_src, extend_vsize = attention
         context, score = step_attention(
             query, attention, attention, attn_mask)
+        # calculate the context vector as the weighted sum of the encoder hidden states, according to attention distribution calculated with the decoder output as query
         dec_out = self._projection(torch.cat([lstm_out, context], dim=1))
+        # dec_out: [batch size, embedding size] attentional hidden state, used for prediction of the next word
 
-        # extend generation prob to extended vocabulary
+        # extend the generation probability to include also words of the extended vocabulary
         gen_prob = self._compute_gen_prob(dec_out, extend_vsize)
-        # compute the probabilty of each copying
+
+        # compute the probabilty of copying
         copy_prob = torch.sigmoid(self._copy(context, states[0][-1], lstm_in))
-        # add the copy prob to existing vocab distribution
+        
+        # we add the two distributions, probability of copying or generating
         lp = torch.log(
             ((-copy_prob + 1) * gen_prob
             ).scatter_add(
@@ -249,16 +201,22 @@ class CopyLSTMDecoder(AttentionalLSTMDecoder):
         return k_tok, k_lp, (states, dec_out), score
 
     def _compute_gen_prob(self, dec_out, extend_vsize, eps=1e-6):
+        # dec_out: [batch size, embedding size] attentional hidden state
+        # extend_vsize = size of the extended vocabulary, w2v vocab + OOV
+        
         logit = torch.mm(dec_out, self._embedding.weight.t())
+        # this logit will be used as probability distribution on the w2v vocabulary words
+
         bsize, vsize = logit.size()
         if extend_vsize > vsize:
             ext_logit = torch.Tensor(bsize, extend_vsize-vsize
                                     ).to(logit.device)
-            ext_logit.fill_(eps)
+            ext_logit.fill_(eps) # OOV words probability distribution filled with arbitrarily small number
             gen_logit = torch.cat([logit, ext_logit], dim=1)
         else:
             gen_logit = logit
         gen_prob = F.softmax(gen_logit, dim=-1)
+        # gen_prob is the actual probability distribution over the whole vocab (w2v + OOV)
         return gen_prob
 
     def _compute_copy_activation(self, context, state, input_, score):
